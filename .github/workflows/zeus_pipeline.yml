@@ -1,9 +1,10 @@
+
 name: ZEUS Satellite Pipeline
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "*/20 * * * *"
 
 permissions:
   contents: write
