@@ -1,15 +1,70 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-17T12:56:08Z",
+  "generated_at": "2026-11-17T12:59:50Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
-  "status": "unavailable",
-  "layer_count": 0,
+  "status": "capabilities_available",
+  "layer_count": 116,
   "candidates": {
-    "rgb": [],
-    "dust": [],
-    "ir": []
+    "rgb": [
+      {
+        "name": "mtg_fd:rgb_geocolour",
+        "title": "Geo Colour RGB - MTG-I - 0 degree"
+      },
+      {
+        "name": "mtg_fd:rgb_truecolour",
+        "title": "True Colour RGB - MTG-I - 0 degree"
+      }
+    ],
+    "dust": [
+      {
+        "name": "mtg_fd:rgb_dust",
+        "title": "Dust RGB - MTG-I - 0 degree"
+      },
+      {
+        "name": "msg_fes:rgb_dust",
+        "title": "Dust RGB - MSG - 0 degree"
+      },
+      {
+        "name": "msg_iodc:rgb_dust",
+        "title": "Dust RGB - MSG - Indian Ocean"
+      },
+      {
+        "name": "mumi:wideareacoverage_rgb_dust",
+        "title": "Geo Ring Dust RGB - Multimission"
+      }
+    ],
+    "ir": [
+      {
+        "name": "mtg_fd:ir105_hrfi",
+        "title": "FCI HRFI IR10.5 μm Image - MTG-I - 0 degree"
+      },
+      {
+        "name": "msg_fes:ir108",
+        "title": "High Rate SEVIRI IR10.8 μm Image - MSG - 0 degree"
+      },
+      {
+        "name": "msg_iodc:ir108",
+        "title": "High Rate SEVIRI IR10.8 μm Image - MSG - Indian Ocean"
+      },
+      {
+        "name": "eps:m01_ir108",
+        "title": "AVHRR IR10.8 6 orbits accumulated - Metop B"
+      },
+      {
+        "name": "eps:m02_ir108",
+        "title": "AVHRR IR10.8 6 orbits accumulated - Metop A"
+      },
+      {
+        "name": "eps:m03_ir108",
+        "title": "AVHRR IR10.8 6 orbits accumulated - Metop C"
+      },
+      {
+        "name": "mumi:worldcloudmap_ir108",
+        "title": "Geostationary Ring IR10.8 μm Image - Multimission"
+      }
+    ]
   },
   "selected_layers": {
     "rgb": null,
@@ -19,13 +74,13 @@
   "image_download_enabled": false,
   "high_resolution_enabled": false,
   "observation_time": null,
-  "error_type": "ValueError",
+  "error_type": null,
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
     "response_bytes": 244972,
-    "xml_root": null,
-    "error_type": "ValueError",
-    "error_message": "XML DTD or entity declaration rejected"
+    "xml_root": "WMT_MS_Capabilities",
+    "error_type": null,
+    "error_message": null
   }
 }
