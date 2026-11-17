@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -19,8 +18,8 @@
  --muted:#9bb6c9;
 }
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%}
 body{
+ margin:0;
  background:var(--bg);
  color:var(--text);
  font-family:Arial,sans-serif;
@@ -33,7 +32,7 @@ header{
 .brand{
  font-size:29px;
  font-weight:800;
- letter-spacing:4px;
+ letter-spacing:3px;
  color:var(--blue);
 }
 .subtitle{
@@ -41,32 +40,28 @@ header{
  color:var(--muted);
  margin-top:5px;
 }
-.toolbar{
+.toolbar,.controls{
  display:grid;
- grid-template-columns:repeat(3,1fr);
- gap:8px;
- padding:12px;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:7px;
+ padding:10px;
 }
-.toolbar button,.controls button{
- padding:13px 5px;
+button{
+ padding:12px 4px;
  background:var(--panel);
  border:1px solid var(--edge);
  border-radius:9px;
  color:var(--text);
+ font-size:12px;
  font-weight:bold;
  cursor:pointer;
 }
-.toolbar button.active,.controls button.active{
+button.active{
  background:#17517b;
  border-color:var(--blue);
- box-shadow:0 0 12px #2d9fdf55;
-}
-button:focus-visible{
- outline:2px solid #fff;
- outline-offset:2px;
 }
 #map{
- height:58vh;
+ height:60vh;
  min-height:330px;
  background:#dbe5e9;
 }
@@ -86,45 +81,47 @@ button:focus-visible{
  font-size:13px;
  line-height:1.7;
 }
-.muted{color:var(--muted)}
-.status{
- display:inline-block;
- padding:4px 8px;
- border:1px solid #597085;
- border-radius:6px;
- color:#c5d8e6;
- font-size:11px;
-}
-.controls{
- display:grid;
- grid-template-columns:repeat(2,minmax(0,1fr));
- gap:8px;
- margin:12px 0;
-}
-.controls button{
- font-size:12px;
- padding:12px 6px;
-}
-.notice{
- color:#c1d5e4;
- font-size:12px;
- line-height:1.6;
-}
-.legend{
- display:flex;
- align-items:center;
- gap:9px;
- margin-top:10px;
- font-size:12px;
+.muted{
  color:var(--muted);
 }
-.legend-dot{
- width:18px;
- height:18px;
- border-radius:50%;
- background:#ffe784;
- box-shadow:0 0 8px #ffd34b;
- flex-shrink:0;
+.notice{
+ font-size:12px;
+ line-height:1.6;
+ color:#bcd2e2;
+}
+.controls{
+ padding:8px 0;
+}
+.flash-icon{
+ background:transparent;
+ border:0;
+}
+.flash-symbol{
+ display:block;
+ font-size:30px;
+ line-height:34px;
+ font-weight:bold;
+ text-align:center;
+ animation:flashPulse 1.6s ease-in-out infinite;
+ text-shadow:
+  0 0 3px #111,
+  0 0 8px currentColor;
+}
+.flash-symbol.yellow{color:#ffdc32}
+.flash-symbol.orange{color:#ff951f}
+.flash-symbol.red{color:#ff3434}
+@keyframes flashPulse{
+ 0%,100%{
+  opacity:.65;
+  transform:scale(.85);
+ }
+ 50%{
+  opacity:1;
+  transform:scale(1.25);
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .flash-symbol{animation:none}
 }
 footer{
  padding:15px;
@@ -132,42 +129,8 @@ footer{
  font-size:11px;
  color:var(--muted);
 }
-.leaflet-container{background:#dbe5e9}
 .leaflet-control-attribution{
  font-size:9px!important;
-}
-/* Solo evidenziazione grafica del raster LI. */
-.zeus-li-tiles.enhanced img.leaflet-tile{
- filter:
-  saturate(1.45)
-  contrast(1.18)
-  drop-shadow(0 0 3px rgba(255,191,35,.65));
-}
-.zeus-li-tiles img.leaflet-tile{
- image-rendering:auto;
-}
-/* Pulsazione soltanto per punti verificati. */
-.verified-flash{
- animation:zeus-pulse 1.8s ease-out infinite;
- transform-box:fill-box;
- transform-origin:center;
-}
-@keyframes zeus-pulse{
- 0%{
-  stroke-opacity:1;
-  fill-opacity:.9;
- }
- 60%{
-  stroke-opacity:.55;
-  fill-opacity:.55;
- }
- 100%{
-  stroke-opacity:1;
-  fill-opacity:.9;
- }
-}
-@media(prefers-reduced-motion:reduce){
- .verified-flash{animation:none}
 }
 </style>
 </head>
@@ -184,81 +147,55 @@ footer{
 
 <div class="toolbar">
  <button id="btn-lightning" class="active"
-  type="button" onclick="setMode('lightning')">
-  ⚡ FULMINI
- </button>
- <button id="btn-rgb" type="button"
-  onclick="setMode('rgb')">
-  ☁ RGB
- </button>
- <button id="btn-ir" type="button"
-  onclick="setMode('ir')">
-  ◉ IR
- </button>
+  onclick="setMode('lightning')">⚡ FULMINI</button>
+ <button id="btn-rgb"
+  onclick="setMode('rgb')">☁ RGB</button>
+ <button id="btn-ir"
+  onclick="setMode('ir')">◉ IR</button>
 </div>
 
 <div id="map"></div>
 
 <section class="panel">
- <h3 id="panel-title">
-  ATTIVITÀ ELETTRICA - LI AFA
- </h3>
- <div id="li-controls" class="controls">
-  <button id="btn-enhance"
-   type="button" class="active"
-   aria-pressed="true"
-   onclick="toggleEnhancement()">
-   ✨ EVIDENZIAZIONE ON
-  </button>
+ <h3 id="panel-title">ATTIVITÀ ELETTRICA LI AFA</h3>
+ <div id="controls" class="controls">
+  <button id="btn-symbols" class="active"
+   onclick="toggleSymbols()">⚡ SIMBOLI ON</button>
   <button id="btn-audio"
-   type="button"
-   aria-pressed="false"
-   onclick="toggleAudio()">
-   🔇 AUDIO OFF
-  </button>
+   onclick="toggleAudio()">🔇 AUDIO OFF</button>
+  <button onclick="testAudio()">♫ TEST AUDIO</button>
  </div>
  <div class="info">
-  <div>
-   Stato:
-   <span id="status" class="status">
-    In attesa dei dati
-   </span>
+  <div>Stato: <strong id="status">Caricamento</strong></div>
+  <div>Fonte: <span id="source">EUMETSAT MTG LI AFA</span></div>
+  <div>Orario WMS:
+   <span id="updated">Non disponibile</span>
   </div>
-  <div>
-   Fonte:
-   <span id="source">EUMETSAT MTG LI - AFA</span>
-  </div>
-  <div>
-   Ultima osservazione:
-   <span id="updated">Non verificata</span>
-  </div>
-  <div id="count-row">
-   Fulmini individuali osservati:
+  <div>Aree grafiche rilevate:
    <strong id="count">—</strong>
   </div>
   <div id="details" class="muted"></div>
  </div>
- <div id="li-legend" class="legend">
-  <span class="legend-dot"></span>
-  <span>
-   Evidenziazione grafica delle aree LI AFA.
-   Non indica un singolo fulmine.
-  </span>
- </div>
+ <p id="legend" class="notice">
+  ⚡ Giallo · ⚡ Arancione · ⚡ Rosso:
+  colori individuati nell'immagine WMS.
+  Non sono classi ufficiali di intensità
+  né posizioni di singoli fulmini.
+ </p>
  <p id="audio-note" class="notice">
-  L'audio segnala esclusivamente nuovi eventi
-  individuali verificati. Nessun suono viene
-  generato dalla sola immagine AFA.
+  Audio automatico solo per nuova attività
+  rilevata tra immagini recenti.
+  Il tasto TEST verifica l'altoparlante.
  </p>
 </section>
 
 <section class="panel">
  <h3>INTEGRAZIONE SCIENTIFICA</h3>
  <div class="info">
-  Dati satellitari EUMETSAT.
-  Feed predisposto per S.I.B.I.L.L.A.
-  e A.T.E.N.A.
-  Nessun dato simulato.
+  Dati satellitari © EUMETSAT.
+  Nessun fulmine individuale simulato.
+  Nessun dato grafico derivato viene
+  inviato a S.I.B.I.L.L.A.
  </div>
 </section>
 
@@ -275,517 +212,562 @@ footer{
 "use strict";
 
 const CONFIG={
- observations:"data/latest.json",
  satellite:"data/satellite.json",
  refreshMs:300000,
- maxAgeMinutes:90,
- liMaxAgeMinutes:30,
+ maxAgeMinutes:30,
  metadataMaxAgeMinutes:45,
- wmsUrl:"https://view.eumetsat.int/geoserver/wms",
- lightningLayer:"mtg_fd:li_afa",
- rgbLayer:"mtg_fd:rgb_geocolour",
- irLayer:"mtg_fd:ir105_hrfi",
- liNativeZoom:5
+ wms:"https://view.eumetsat.int/geoserver/wms",
+ li:"mtg_fd:li_afa",
+ rgb:"mtg_fd:rgb_geocolour",
+ ir:"mtg_fd:ir105_hrfi"
 };
 
-const map=L.map("map",{
- preferCanvas:true,
- zoomControl:true
-}).setView([41.8,13.5],5);
+const $=id=>document.getElementById(id);
+const map=L.map("map").setView([41.8,13.5],5);
 
 L.tileLayer(
  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
  {
-  attribution:"&copy; OpenStreetMap contributors",
-  maxZoom:19,
-  tileSize:256
+  attribution:"© OpenStreetMap contributors",
+  maxZoom:19
  }
 ).addTo(map);
 
-const markers=L.layerGroup().addTo(map);
-const $=id=>document.getElementById(id);
-
-let satelliteLayer=null;
+const symbols=L.layerGroup().addTo(map);
+let layer=null;
 let mode="lightning";
-let latest=null;
-let liTime=null;
-let liDisplayRecent=false;
-let tileErrors=0;
-let tileLoaded=0;
 let requestId=0;
-let enhancement=true;
+let currentTime=null;
+let currentFresh=false;
+let showSymbols=true;
 let audioEnabled=false;
 let audioContext=null;
-let observationInitialized=false;
-let lastObservationKey=null;
-let seenFlashKeys=new Set();
+let pixelReadable=true;
+let scanPoints=[];
+let previousPoints=null;
+let previousTime=null;
+let previousView=null;
+let scanTimer=null;
+let scanCompleted=false;
+let currentView=null;
 
-function setStatus(message){
- $("status").textContent=message;
+function status(text){
+ $("status").textContent=text;
 }
 
-function clearSatellite(){
+function fresh(value,minutes){
+ const t=Date.parse(value);
+ if(!Number.isFinite(t))return false;
+ const age=(Date.now()-t)/60000;
+ return age>=-5&&age<=minutes;
+}
+
+function viewKey(){
+ const c=map.getCenter();
+ return [
+  Math.round(c.lat*10),
+  Math.round(c.lng*10),
+  map.getZoom()
+ ].join(":");
+}
+
+function clearLayer(){
  requestId++;
- if(satelliteLayer){
-  map.removeLayer(satelliteLayer);
-  satelliteLayer=null;
+ if(layer){
+  map.removeLayer(layer);
+  layer=null;
  }
- tileErrors=0;
- tileLoaded=0;
+ clearTimeout(scanTimer);
+ symbols.clearLayers();
+ scanPoints=[];
+ scanCompleted=false;
+ pixelReadable=true;
+ $("count").textContent="—";
 }
 
-function toggleEnhancement(){
- enhancement=!enhancement;
- $("btn-enhance").classList.toggle(
-  "active",enhancement
+function toggleSymbols(){
+ showSymbols=!showSymbols;
+ $("btn-symbols").classList.toggle(
+  "active",showSymbols
  );
- $("btn-enhance").setAttribute(
-  "aria-pressed",String(enhancement)
- );
- $("btn-enhance").textContent=enhancement
-  ?"✨ EVIDENZIAZIONE ON"
-  :"✨ EVIDENZIAZIONE OFF";
- updateEnhancement();
-}
-
-function updateEnhancement(){
- const pane=map.getPane("zeusLiPane");
- if(pane){
-  pane.classList.toggle("enhanced",enhancement);
+ $("btn-symbols").textContent=showSymbols
+  ?"⚡ SIMBOLI ON":"⚡ SIMBOLI OFF";
+ if(!showSymbols){
+  symbols.clearLayers();
+ }else{
+  drawSymbols(scanPoints);
  }
 }
 
-function toggleAudio(){
+async function ensureAudio(){
+ const AudioClass=
+  window.AudioContext||window.webkitAudioContext;
+ if(!AudioClass)return false;
+ try{
+  if(!audioContext){
+   audioContext=new AudioClass();
+  }
+  await audioContext.resume();
+  return audioContext.state==="running";
+ }catch(error){
+  console.warn("Audio:",error);
+  return false;
+ }
+}
+
+async function toggleAudio(){
  audioEnabled=!audioEnabled;
+ if(audioEnabled){
+  const ready=await ensureAudio();
+  if(!ready){
+   audioEnabled=false;
+   status("Audio non disponibile");
+  }
+ }
  $("btn-audio").classList.toggle(
   "active",audioEnabled
  );
- $("btn-audio").setAttribute(
-  "aria-pressed",String(audioEnabled)
- );
  $("btn-audio").textContent=audioEnabled
   ?"🔊 AUDIO ON":"🔇 AUDIO OFF";
- if(audioEnabled){
-  const AudioClass=
-   window.AudioContext||window.webkitAudioContext;
-  if(AudioClass){
-   try{
-    if(!audioContext){
-     audioContext=new AudioClass();
-    }
-    audioContext.resume().catch(()=>{});
-   }catch(error){
-    console.warn("Audio:",error.message);
-   }
-  }
- }
 }
 
-function playVerifiedSignal(){
- if(!audioEnabled||!audioContext)return;
- if(audioContext.state!=="running")return;
- try{
-  const now=audioContext.currentTime;
-  const oscillator=audioContext.createOscillator();
-  const gain=audioContext.createGain();
-  oscillator.type="sine";
-  oscillator.frequency.setValueAtTime(620,now);
-  oscillator.frequency.exponentialRampToValueAtTime(
-   390,now+.16
-  );
-  gain.gain.setValueAtTime(.0001,now);
-  gain.gain.exponentialRampToValueAtTime(
-   .075,now+.015
-  );
-  gain.gain.exponentialRampToValueAtTime(
-   .0001,now+.18
-  );
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-  oscillator.start(now);
-  oscillator.stop(now+.19);
- }catch(error){
-  console.warn("Segnale audio:",error.message);
+function beep(){
+ if(!audioContext||
+    audioContext.state!=="running")return;
+ const t=audioContext.currentTime;
+ const osc=audioContext.createOscillator();
+ const gain=audioContext.createGain();
+ osc.type="sine";
+ osc.frequency.setValueAtTime(740,t);
+ osc.frequency.exponentialRampToValueAtTime(
+  420,t+.22
+ );
+ gain.gain.setValueAtTime(.0001,t);
+ gain.gain.exponentialRampToValueAtTime(
+  .12,t+.025
+ );
+ gain.gain.exponentialRampToValueAtTime(
+  .0001,t+.24
+ );
+ osc.connect(gain);
+ gain.connect(audioContext.destination);
+ osc.start(t);
+ osc.stop(t+.25);
+}
+
+async function testAudio(){
+ if(await ensureAudio()){
+  beep();
+ }else{
+  status("Test audio non disponibile");
  }
 }
  
-function parseFreshTime(value,maxAge){
- if(typeof value!=="string")return null;
- const time=Date.parse(value);
- if(!Number.isFinite(time))return null;
- const age=(Date.now()-time)/60000;
- if(age< -5||age>maxAge)return null;
- return new Date(time).toISOString()
-  .replace(".000Z","Z");
-}
+function colorClass(r,g,b,a){
+ if(a<120)return null;
+ const max=Math.max(r,g,b);
+ const min=Math.min(r,g,b);
+ if(max-min<65)return null;
 
-async function readSatelliteMetadata(){
- const response=await fetch(
-  CONFIG.satellite+"?t="+Date.now(),
-  {cache:"no-store"}
- );
- if(!response.ok){
-  throw new Error("Metadata HTTP "+response.status);
+ // Selezione cromatica del PNG, non dBZ
+ // né intensità elettrica ufficiale.
+ if(r>155&&r>g*1.3&&r>b*1.6){
+  return "red";
  }
- const data=await response.json();
- if(data.schema_version!==1){
-  throw new Error("Schema satellite non valido");
+ if(r>165&&g>65&&g<185&&b<110){
+  return "orange";
  }
- const li=data.lightning_imager;
- if(!li||li.layer!==CONFIG.lightningLayer||
-    li.layer_found!==true){
-  throw new Error("Layer LI non confermato");
- }
- if(data.status!=="capabilities_available"){
-  throw new Error("Catalogo WMS non disponibile");
- }
-
- // L'orario deve essere valido, ma non deve
- // essere recente per mostrare l'ultima immagine.
- const rawTime=Date.parse(li.latest_advertised_time);
- if(!Number.isFinite(rawTime)||
-    rawTime>Date.now()+300000){
-  throw new Error("Orario LI non valido");
- }
- const time=new Date(rawTime).toISOString()
-  .replace(".000Z","Z");
-
- // La freschezza resta un'informazione distinta
- // dalla possibilità di visualizzare il layer.
- const recent=Boolean(parseFreshTime(
-  time,CONFIG.liMaxAgeMinutes
- ));
- const metadataRecent=Boolean(parseFreshTime(
-  data.generated_at,CONFIG.metadataMaxAgeMinutes
- ));
-
- // Il controllo tecnico GetMap rimane obbligatorio.
- const test=li.getmap_at_advertised_time;
- if(!test||test.image_signature_valid!==true){
-  throw new Error("GetMap temporale non confermato");
- }
- return {time,recent,metadataRecent};
-}
-
-function verifiedPoints(data){
- if(!data||data.status!=="ok")return [];
- if(!parseFreshTime(
-  data.observed_at,CONFIG.maxAgeMinutes
- ))return [];
- if(!Array.isArray(data.flashes))return [];
-
- return data.flashes.filter(p=>
-  p&&Number.isFinite(p.lat)&&
-  Number.isFinite(p.lon)&&
-  p.lat>=-90&&p.lat<=90&&
-  p.lon>=-180&&p.lon<=180
- );
-}
-
-function flashKey(p){
- if(typeof p.id==="string"&&p.id.trim()){
-  return "id:"+p.id;
- }
- if(typeof p.time==="string"&&
-    Number.isFinite(Date.parse(p.time))){
-  return "time:"+p.time+
-   ":"+p.lat+":"+p.lon;
+ if(r>155&&g>140&&b<125){
+  return "yellow";
  }
  return null;
 }
 
-function renderLightning(){
- if(mode!=="lightning")return;
- markers.clearLayers();
- $("count").textContent="—";
+function inspectTile(img,coords){
+ if(!pixelReadable||mode!=="lightning")return;
+ if(!img||!img.naturalWidth)return;
 
- const points=verifiedPoints(latest);
- if(!latest||latest.status!=="ok")return;
-
- $("count").textContent=points.length;
-
- for(const p of points){
-  const point=L.circleMarker([p.lat,p.lon],{
-   renderer:L.svg(),
-   radius:7,
-   color:"#ffffff",
-   weight:2,
-   opacity:1,
-   fillColor:"#ffe47b",
-   fillOpacity:.9,
-   className:"verified-flash"
-  });
-
-  point.bindPopup(
-   "Evento elettrico individuale verificato"
-  );
-  point.addTo(markers);
- }
-}
-
-function processVerifiedEvents(data){
- const points=verifiedPoints(data);
- if(!data||data.status!=="ok")return;
-
- const observationTime=parseFreshTime(
-  data.observed_at,CONFIG.maxAgeMinutes
+ const canvas=document.createElement("canvas");
+ canvas.width=256;
+ canvas.height=256;
+ const ctx=canvas.getContext(
+  "2d",{willReadFrequently:true}
  );
- if(!observationTime)return;
+ if(!ctx)return;
 
- const keys=new Set();
- for(const p of points){
-  const key=flashKey(p);
-  if(key)keys.add(key);
- }
-
- if(!observationInitialized){
-  observationInitialized=true;
-  lastObservationKey=observationTime;
-  seenFlashKeys=keys;
+ let data;
+ try{
+  ctx.drawImage(img,0,0,256,256);
+  data=ctx.getImageData(
+   0,0,256,256
+  ).data;
+ }catch(error){
+  // Il WMS può non autorizzare
+  // la lettura dei pixel cross-origin.
+  pixelReadable=false;
+  scanPoints=[];
+  symbols.clearLayers();
+  $("count").textContent="—";
+  status("LI visibile - analisi pixel non consentita");
   return;
  }
 
- const previousTime=Date.parse(lastObservationKey);
- const currentTime=Date.parse(observationTime);
- if(currentTime<=previousTime)return;
+ const step=8;
+ const cols=32;
+ const rows=32;
+ const visited=new Set();
 
- let newEvents=0;
- for(const key of keys){
-  if(!seenFlashKeys.has(key)){
-   newEvents++;
-  }
+ function sample(x,y){
+  const i=(y*step*256+x*step)*4;
+  return colorClass(
+   data[i],data[i+1],data[i+2],data[i+3]
+  );
  }
 
- lastObservationKey=observationTime;
- seenFlashKeys=keys;
+ for(let y=0;y<rows;y++){
+  for(let x=0;x<cols;x++){
+   const key=y*cols+x;
+   if(visited.has(key))continue;
+   const kind=sample(x,y);
+   if(!kind)continue;
 
- if(newEvents>0){
-  playVerifiedSignal();
+   const queue=[[x,y]];
+   visited.add(key);
+   let sx=0,sy=0,n=0;
+
+   for(let q=0;q<queue.length;q++){
+    const [cx,cy]=queue[q];
+    sx+=cx;
+    sy+=cy;
+    n++;
+
+    for(const [dx,dy] of [
+     [1,0],[-1,0],[0,1],[0,-1]
+    ]){
+     const nx=cx+dx,ny=cy+dy;
+     if(nx<0||ny<0||
+        nx>=cols||ny>=rows)continue;
+     const nk=ny*cols+nx;
+     if(visited.has(nk))continue;
+     if(sample(nx,ny)!==kind)continue;
+     visited.add(nk);
+     queue.push([nx,ny]);
+    }
+   }
+
+   // Escludiamo pixel isolati.
+   if(n<4)continue;
+
+   const px=coords.x*256+
+    (sx/n)*step+step/2;
+   const py=coords.y*256+
+    (sy/n)*step+step/2;
+   const latlng=map.unproject(
+    L.point(px,py),coords.z
+   );
+
+   if(!Number.isFinite(latlng.lat)||
+      !Number.isFinite(latlng.lng))continue;
+
+   scanPoints.push({
+    lat:latlng.lat,
+    lng:latlng.lng,
+    kind,
+    size:n
+   });
+  }
  }
 }
 
-function attachWms(layerName,lightning,time){
- const currentRequest=requestId;
- const selectedMode=mode;
+function consolidate(points){
+ const sorted=[...points].sort(
+  (a,b)=>b.size-a.size
+ );
+ const result=[];
 
+ for(const p of sorted){
+  const here=L.latLng(p.lat,p.lng);
+  const nearby=result.some(q=>
+   here.distanceTo(
+    L.latLng(q.lat,q.lng)
+   )<55000
+  );
+  if(!nearby)result.push(p);
+  if(result.length>=30)break;
+ }
+ return result;
+}
+
+function drawSymbols(points){
+ symbols.clearLayers();
+ if(!showSymbols||mode!=="lightning")return;
+
+ for(const p of points){
+  const icon=L.divIcon({
+   className:"flash-icon",
+   html:
+    '<span class="flash-symbol '+p.kind+
+    '">⚡</span>',
+   iconSize:[36,36],
+   iconAnchor:[18,18]
+  });
+
+  L.marker([p.lat,p.lng],{
+   icon,
+   keyboard:true
+  }).bindPopup(
+   "Area cromatica LI AFA rilevata. "+
+   "Colore: "+p.kind+". "+
+   "Non rappresenta un fulmine individuale."
+  ).addTo(symbols);
+ }
+}
+
+function finishScan(){
+ if(mode!=="lightning"||
+    !pixelReadable)return;
+
+ const points=consolidate(scanPoints);
+ scanPoints=points;
+ scanCompleted=true;
+ $("count").textContent=String(points.length);
+ drawSymbols(points);
+
+ if(currentFresh&&
+    previousPoints!==null&&
+    previousTime!==currentTime&&
+    previousView===currentView&&
+    points.length>0){
+
+  const added=points.some(p=>{
+   const here=L.latLng(p.lat,p.lng);
+   return !previousPoints.some(q=>
+    here.distanceTo(
+     L.latLng(q.lat,q.lng)
+    )<80000
+   );
+  });
+
+  if(added&&audioEnabled)beep();
+ }
+
+ // Conserviamo soltanto un confronto
+ // riferito alla stessa inquadratura.
+ if(currentFresh){
+  previousPoints=points;
+  previousTime=currentTime;
+  previousView=currentView;
+ }else{
+  previousPoints=null;
+  previousTime=null;
+  previousView=null;
+ }
+
+ status(currentFresh
+  ?"LI caricato - aree grafiche indicative"
+  :"Dato non recente - nessun audio automatico");
+}
+
+function attachWms(name,isLI,time){
+ const token=requestId;
  const options={
-  layers:layerName,
+  layers:name,
   styles:"",
   format:"image/png",
   transparent:true,
   version:"1.1.1",
   tileSize:256,
-  opacity:lightning?1:.85,
+  opacity:isLI?1:.85,
   attribution:"© EUMETSAT"
  };
 
- if(lightning){
+ if(isLI){
   options.time=time;
-  options.maxNativeZoom=CONFIG.liNativeZoom;
+  options.crossOrigin="anonymous";
+  options.maxNativeZoom=5;
   options.maxZoom=19;
   options.keepBuffer=3;
   options.updateWhenZooming=false;
   options.updateWhenIdle=true;
-  options.pane="zeusLiPane";
  }
 
- const layer=L.tileLayer.wms(
-  CONFIG.wmsUrl,options
+ const next=L.tileLayer.wms(
+  CONFIG.wms,options
  );
 
- layer.on("tileload",()=>{
-  if(currentRequest!==requestId||
-     mode!==selectedMode)return;
-  tileLoaded++;
+ if(isLI){
+  next.on("tileload",event=>{
+   if(token!==requestId||
+      mode!=="lightning")return;
+   inspectTile(event.tile,event.coords);
+  });
+ }
+
+ next.on("tileerror",()=>{
+  if(token!==requestId)return;
+  status("Errore caricamento WMS");
  });
 
- layer.on("tileerror",()=>{
-  if(currentRequest!==requestId||
-     mode!==selectedMode)return;
-  tileErrors++;
-  setStatus("Errore caricamento WMS");
- });
-
- layer.on("load",()=>{
-  if(currentRequest!==requestId||
-     mode!==selectedMode)return;
-  if(tileErrors>0){
-   setStatus("Caricamento parziale");
-  }else if(tileLoaded>0){
-   setStatus(lightning
-    ?(liDisplayRecent
-      ?"LI caricato - contenuto non verificato"
-      :"Dato non recente - contenuto non verificato")
-    :"Tile satellitari caricate");
+ next.on("load",()=>{
+  if(token!==requestId)return;
+  if(isLI){
+   clearTimeout(scanTimer);
+   scanTimer=setTimeout(
+    finishScan,350
+   );
   }else{
-   setStatus("Nessuna tile confermata");
+   status("Immagine satellitare caricata");
   }
  });
 
- satelliteLayer=layer;
- layer.addTo(map);
- setStatus("Caricamento satellite");
+ layer=next;
+ next.addTo(map);
+ status("Caricamento satellite");
 }
 
-async function updateLightningLayer(){
+async function updateLI(){
  if(mode!=="lightning")return;
  const token=requestId;
 
  try{
-  const info=await readSatelliteMetadata();
-  const {time,recent,metadataRecent}=info;
+  const response=await fetch(
+   CONFIG.satellite+"?t="+Date.now(),
+   {cache:"no-store"}
+  );
+  if(!response.ok){
+   throw new Error(
+    "Metadata HTTP "+response.status
+   );
+  }
+
+  const data=await response.json();
+  const li=data.lightning_imager;
+
+  if(data.schema_version!==1||
+     data.status!=="capabilities_available"||
+     !li||
+     li.layer_found!==true||
+     li.layer!==CONFIG.li||
+     !li.getmap_at_advertised_time
+       ?.image_signature_valid){
+   throw new Error(
+    "Diagnostica LI non valida"
+   );
+  }
+
+  const raw=Date.parse(
+   li.latest_advertised_time
+  );
+  if(!Number.isFinite(raw)||
+     raw>Date.now()+300000){
+   throw new Error("Orario LI non valido");
+  }
+
+  const time=new Date(raw).toISOString()
+   .replace(".000Z","Z");
+  const recent=fresh(
+   time,CONFIG.maxAgeMinutes
+  )&&fresh(
+   data.generated_at,
+   CONFIG.metadataMaxAgeMinutes
+  );
+
   if(mode!=="lightning"||
      token!==requestId)return;
 
-  if(liTime===time&&satelliteLayer){
-   liDisplayRecent=recent&&metadataRecent;
-   setStatus(liDisplayRecent
-    ?"LI caricato - contenuto non verificato"
-    :"Dato non recente - contenuto non verificato");
-   return;
-  }
-
-  clearSatellite();
-  liTime=time;
-  liDisplayRecent=recent&&metadataRecent;
-
+  currentFresh=recent;
   $("updated").textContent=
    time.replace("T"," ").replace("Z"," UTC");
 
-  $("details").textContent=
-   (liDisplayRecent
-    ?"Orario LI recente dichiarato dal WMS. "
-    :"DATO NON RECENTE: ultima immagine disponibile; non usare come attività attuale. ")+
-   "LI AFA: aree ottiche di attività "+
-   "elettrica, non singoli fulmini. "+
-   "L'evidenziazione è solo grafica. "+
-   "Orario dichiarato dal WMS; "+
-   "contenuto e georeferenziazione "+
-   "ancora da verificare.";
+  $("details").textContent=recent
+   ?"Orario recente dichiarato dal WMS. "+
+    "Contenuto e georeferenziazione "+
+    "non verificati indipendentemente."
+   :"Immagine non recente: visualizzazione "+
+    "indicativa, audio automatico sospeso.";
 
-  attachWms(CONFIG.lightningLayer,true,time);
-  if(!liDisplayRecent){
-   setStatus(
-    "Dato non recente - contenuto non verificato"
-   );
+  if(currentTime===time&&layer){
+   if(!recent){
+    previousPoints=null;
+    previousTime=null;
+   }
+   return;
   }
+
+  clearLayer();
+  currentTime=time;
+  currentView=viewKey();
+  attachWms(CONFIG.li,true,time);
+
  }catch(error){
   if(mode!=="lightning"||
      token!==requestId)return;
-
-  clearSatellite();
-  liTime=null;
-  liDisplayRecent=false;
+  clearLayer();
+  currentTime=null;
+  currentFresh=false;
   $("updated").textContent="Non verificata";
-  $("details").textContent=
-   "Layer LI sospeso: "+error.message+
-   ". Nessuna immagine non verificata mostrata.";
-  setStatus("LI non disponibile");
-  console.warn("ZEUS LI:",error.message);
+  $("details").textContent=error.message;
+  status("LI non disponibile");
  }
 }
 
 function setMode(next){
- if(!["lightning","rgb","ir"].includes(next))return;
-
- mode=next;
-
- ["lightning","rgb","ir"].forEach(id=>{
-  $("btn-"+id).classList.toggle(
-   "active",id===next
-  );
- });
-
- markers.clearLayers();
- clearSatellite();
- liTime=null;
- liDisplayRecent=false;
-
- const lightning=next==="lightning";
- const rgb=next==="rgb";
- const layerName=lightning
-  ?CONFIG.lightningLayer
-  :(rgb?CONFIG.rgbLayer:CONFIG.irLayer);
-
- $("li-controls").hidden=!lightning;
- $("li-legend").hidden=!lightning;
- $("audio-note").hidden=!lightning;
-
- $("panel-title").textContent=lightning
-  ?"ATTIVITÀ ELETTRICA - LI AFA"
-  :(rgb?"SATELLITE RGB":"SATELLITE IR");
-
- $("source").textContent=lightning
-  ?"EUMETSAT MTG LI - AFA"
-  :(rgb?"EUMETSAT MTG Geo Colour"
-       :"EUMETSAT MTG IR 10.5 µm");
-
- $("count-row").hidden=!lightning;
- $("updated").textContent="Non verificata";
-
- if(lightning){
-  $("details").textContent=
-   "Verifica dell'orario LI in corso.";
-  renderLightning();
-  setStatus("Controllo dati LI");
-  updateLightningLayer();
+ if(!["lightning","rgb","ir"].includes(next)){
   return;
  }
 
- $("details").textContent=
-  "Visualizzazione WMS EUMETSAT. "+
-  "Disponibilità e orario da verificare.";
+ mode=next;
+ clearLayer();
+ currentTime=null;
+ currentFresh=false;
 
- attachWms(layerName,false,null);
-}
-
-async function loadObservations(){
- try{
-  const response=await fetch(
-   CONFIG.observations+"?t="+Date.now(),
-   {cache:"no-store"}
+ for(const name of ["lightning","rgb","ir"]){
+  $("btn-"+name).classList.toggle(
+   "active",name===next
   );
-
-  if(!response.ok){
-   throw new Error("HTTP "+response.status);
-  }
-
-  const data=await response.json();
-
-  if(data.schema_version!==1||
-     !["ok","unavailable"].includes(data.status)){
-   throw new Error("Schema JSON non valido");
-  }
-
-  latest=data;
-  processVerifiedEvents(data);
- }catch(error){
-  latest=null;
-  console.warn("ZEUS:",error.message);
  }
 
- if(mode==="lightning"){
-  renderLightning();
+ const isLI=next==="lightning";
+ $("controls").hidden=!isLI;
+ $("legend").hidden=!isLI;
+ $("audio-note").hidden=!isLI;
+
+ $("panel-title").textContent=isLI
+  ?"ATTIVITÀ ELETTRICA LI AFA"
+  :next==="rgb"
+   ?"SATELLITE RGB":"SATELLITE IR";
+
+ $("source").textContent=isLI
+  ?"EUMETSAT MTG LI AFA"
+  :next==="rgb"
+   ?"EUMETSAT MTG Geo Colour"
+   :"EUMETSAT MTG IR 10.5 µm";
+
+ $("updated").textContent="Non verificata";
+ $("details").textContent="";
+
+ if(isLI){
+  updateLI();
+ }else{
+  attachWms(
+   next==="rgb"?CONFIG.rgb:CONFIG.ir,
+   false,null
+  );
  }
 }
 
-async function refresh(){
- await loadObservations();
- if(mode==="lightning"){
-  await updateLightningLayer();
- }
-}
-
-map.createPane("zeusLiPane");
-map.getPane("zeusLiPane").style.zIndex="350";
-map.getPane("zeusLiPane").classList.add(
- "zeus-li-tiles"
-);
-updateEnhancement();
+map.on("moveend",()=>{
+ if(mode!=="lightning")return;
+ previousPoints=null;
+ previousTime=null;
+ previousView=null;
+});
 
 setMode("lightning");
-loadObservations();
-setInterval(refresh,CONFIG.refreshMs);
+
+setInterval(()=>{
+ if(mode==="lightning")updateLI();
+},CONFIG.refreshMs);
 </script>
 </body>
 </html>
