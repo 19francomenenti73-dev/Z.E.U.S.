@@ -162,7 +162,8 @@ const CONFIG={
  wmsUrl:"https://view.eumetsat.int/geoserver/wms",
  lightningLayer:"mtg_fd:li_afa",
  rgbLayer:"mtg_fd:rgb_geocolour",
- irLayer:"mtg_fd:ir105_hrfi"
+ irLayer:"mtg_fd:ir105_hrfi",
+ liNativeZoom:5
 };
 
 const map=L.map("map",{
@@ -275,9 +276,11 @@ function setMode(next){
 
  if(lightning){
   $("details").textContent=
-   "Prova layer LI AFA: aree di attività "+
+   "Layer LI AFA: aree di attività "+
    "elettrica, non singoli fulmini. "+
-   "Data e aggiornamento non verificati.";
+   "Data e aggiornamento non verificati. "+
+   "Zoom oltre livello 5 con dettaglio "+
+   "satellitare invariato.";
   renderLightning();
  }else{
   $("details").textContent=
@@ -293,18 +296,32 @@ function setMode(next){
  const currentRequest=requestId;
  const selectedMode=next;
 
+ const options={
+  layers:layerName,
+  styles:"",
+  format:"image/png",
+  transparent:true,
+  version:"1.1.1",
+  tileSize:256,
+  opacity:lightning?1:0.85,
+  attribution:"© EUMETSAT"
+ };
+
+ // Solo LI: oltre zoom 5 si ingrandiscono
+ // le tile del livello 5.
+ // RGB e IR mantengono il comportamento
+ // originale, senza limiti aggiuntivi.
+ if(lightning){
+  options.maxNativeZoom=CONFIG.liNativeZoom;
+  options.maxZoom=19;
+  options.keepBuffer=3;
+  options.updateWhenZooming=false;
+  options.updateWhenIdle=true;
+ }
+
  satelliteLayer=L.tileLayer.wms(
   CONFIG.wmsUrl,
-  {
-   layers:layerName,
-   styles:"",
-   format:"image/png",
-   transparent:true,
-   version:"1.1.1",
-   tileSize:256,
-   opacity:lightning?1:0.85,
-   attribution:"© EUMETSAT"
-  }
+  options
  );
 
  satelliteLayer.on("tileload",()=>{
