@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-17T12:59:50Z",
+  "generated_at": "2026-11-17T13:11:35Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -79,8 +79,26 @@
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
     "response_bytes": 244972,
-    "xml_root": "WMT_MS_Capabilities",
-    "error_type": null,
-    "error_message": null
+    "xml_root": "WMT_MS_Capabilities"
+  },
+  "lightning_imager": {
+    "layer": "mtg_fd:li_afa",
+    "layer_found": true,
+    "time_dimension_present": false,
+    "latest_advertised_time": null,
+    "age_minutes": null,
+    "freshness_verified": false,
+    "getmap": {
+      "attempted": true,
+      "http_status": 200,
+      "content_type": "image/png",
+      "response_bytes": 1932,
+      "image_signature_valid": true,
+      "image_width": 256,
+      "image_height": 256,
+      "error_type": null,
+      "error_message": null
+    },
+    "status": "image_response_unverified_time"
   }
 }
