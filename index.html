@@ -159,9 +159,10 @@ footer{
   né posizioni di fulmini individuali.
  </p>
  <p id="audio-note" class="notice">
-  Audio automatico soltanto per nuove
-  aree grafiche in immagini recenti
-  e confrontabili.
+  Con AUDIO ON, crepitio ripetuto mentre
+   restano simboli rilevati. I simboli
+   persistono finché non premi SIMBOLI OFF.
+   Possono riferirsi a immagini precedenti.
  </p>
 </section>
 
@@ -229,6 +230,9 @@ let scanTimer=null;
 let loadedTiles=0;
 let failedTiles=0;
 let refreshBusy=false;
+let soundTimer=null;
+let soundBusy=false;
+let symbolsTimestamp=null;
 
 function setStatus(message){
  $("status").textContent=message;
@@ -259,13 +263,11 @@ function clearLayer(){
   map.removeLayer(layer);
   layer=null;
  }
- symbols.clearLayers();
+ // Conserva i simboli rilevati anche cambiando frame.
  tileResults.clear();
- displayPoints=[];
  analysisAllowed=true;
  loadedTiles=0;
  failedTiles=0;
- $("count").textContent="—";
 }
 
 function toggleSymbols(){
@@ -275,7 +277,32 @@ function toggleSymbols(){
  );
  $("btn-symbols").textContent=showSymbols
   ?"⚡ SIMBOLI ON":"⚡ SIMBOLI OFF";
+ if(!showSymbols){
+  displayPoints=[];
+  symbolsTimestamp=null;
+  $("count").textContent="0";
+ }
  drawSymbols(displayPoints);
+ syncSound();
+}
+
+function syncSound(){
+ clearInterval(soundTimer);
+ 
+ soundTimer=null;
+ if(!audioEnabled||!showSymbols||
+    !displayPoints.length||mode!=="lightning")return;
+ soundTimer=setInterval(async()=>{
+  if(soundBusy||document.hidden||!audioEnabled||
+     !showSymbols||!displayPoints.length||
+     mode!=="lightning")return;
+  soundBusy=true;
+  try{
+   if(await initializeAudio()&&audioEnabled){
+    electricCrack();
+   }
+  }finally{soundBusy=false;}
+ },2200);
 }
 
 async function initializeAudio(){
@@ -300,6 +327,7 @@ async function toggleAudio(){
  );
  $("btn-audio").textContent=audioEnabled
   ?"🔊 AUDIO ON":"🔇 AUDIO OFF";
+ syncSound();
 }
 
 function electricCrack(){
@@ -501,9 +529,7 @@ function drawSymbols(points){
 function finishAnalysis(){
  if(mode!=="lightning")return;
  if(!analysisAllowed){
-  symbols.clearLayers();
-  displayPoints=[];
-  $("count").textContent="—";
+  // Non cancellare i simboli già osservati.
   setStatus("LI visibile - lettura pixel bloccata");
   previous=null;
   return;
@@ -514,35 +540,35 @@ function finishAnalysis(){
   all.push(...item);
  }
  const points=consolidate(all);
- displayPoints=points;
- $("count").textContent=String(points.length);
- drawSymbols(points);
+ if(points.length){
+  for(const p of points){
+   const here=L.latLng(p.lat,p.lng);
+   if(!displayPoints.some(q=>
+      here.distanceTo(L.latLng(q.lat,q.lng))<30000)){
+    displayPoints.push(p);
+   }
+  }
+  symbolsTimestamp=liTime;
+  $("count").textContent=String(displayPoints.length);
+  drawSymbols(displayPoints);
+ }
+ // Nessun pixel trovato: conserva le aree precedenti,
+ // ma non attribuirle al frame corrente.
+ syncSound();
 
  const view=currentBoundsKey();
- if(liRecent&&previous&&
-    previous.time!==liTime&&
-    previous.view===view&&
-    loadedTiles>0&&failedTiles===0){
-  const added=points.some(p=>{
-   const here=L.latLng(p.lat,p.lng);
-   return !previous.points.some(q=>
-    here.distanceTo(
-     L.latLng(q.lat,q.lng)
-    )<40000
-   );
-  });
-  if(added&&audioEnabled)electricCrack();
- }
-
- previous=liRecent&&
-  loadedTiles>0&&failedTiles===0
+ previous=liRecent&&loadedTiles>0&&failedTiles===0
   ?{time:liTime,view,points}:null;
 
  setStatus(!liRecent
-  ?"Dato non recente - audio sospeso"
+  ?"Dato non recente - simboli precedenti"
   :failedTiles
    ?"Caricamento LI parziale"
    :"LI caricato - analisi grafica indicativa");
+ if(symbolsTimestamp&&symbolsTimestamp!==liTime){
+  $("details").textContent+=
+   " Simboli persistenti del frame "+symbolsTimestamp+".";
+ }
 }
 
 function attachWms(name,isLI,time){
@@ -554,9 +580,9 @@ function attachWms(name,isLI,time){
   opacity:isLI?1:.85,
   attribution:"© EUMETSAT"
  };
-
+ 
+ if(time)options.time=time;
  if(isLI){
-  options.time=time;
   options.crossOrigin="anonymous";
   options.maxNativeZoom=5;
   options.maxZoom=19;
@@ -673,7 +699,10 @@ async function updateLI(){
     "Non necessariamente attività attuale.";
 
   if(liTime===time&&layer){
-   if(!recent)previous=null;
+   if(!recent){
+    previous=null;
+    setStatus("LI non recente - simboli precedenti");
+   }
    return;
   }
 
@@ -694,30 +723,55 @@ async function updateLI(){
  }
 }
 
-function refreshSatellite(){
+async function refreshSatellite(){
  if(mode==="lightning")return;
-
  const selected=mode;
- const name=selected==="rgb"
-  ?CONFIG.rgb:CONFIG.ir;
-
- // Nuova richiesta WMS per RGB e IR.
- // Non cambia la posizione della mappa.
- clearLayer();
- attachWms(name,false,null);
-
- const now=new Date();
- $("updated").textContent=
-  now.toLocaleTimeString("it-IT")+
-  " - controllo, non acquisizione";
-
- $("details").textContent=selected==="rgb"
-  ?"Geo Colour EUMETSAT giorno/notte. "+
-   "L'immagine dipende dai dati disponibili "+
-   "sul server WMS."
-  :"IR 10.5 µm EUMETSAT. "+
-   "Aggiornamento WMS richiesto; "+
-   "orario di acquisizione non verificato.";
+ const token=generation;
+ const name=selected==="rgb"?CONFIG.rgb:CONFIG.ir;
+ try{
+  const response=await fetch(
+   CONFIG.satellite+"?t="+Date.now(),
+   {cache:"no-store"}
+  );
+  if(!response.ok)throw new Error(
+   "Metadata HTTP "+response.status
+  );
+  const data=await response.json();
+  const info=data.satellite_times?.[selected];
+  if(data.schema_version!==1||
+     data.status!=="capabilities_available"||
+     !info||info.layer!==name||
+     info.layer_found!==true||
+     info.getmap_at_advertised_time
+       ?.image_signature_valid!==true){
+   throw new Error("Immagine WMS non verificata");
+  }
+  const timestamp=Date.parse(info.latest_advertised_time);
+  if(!Number.isFinite(timestamp)||
+     timestamp>Date.now()+300000){
+   throw new Error("Orario WMS non valido");
+  }
+  if(mode!==selected||token!==generation)return;
+  const time=new Date(timestamp).toISOString()
+   .replace(".000Z","Z");
+  const recent=isFresh(time,CONFIG.maxAgeMinutes)&&
+   isFresh(data.generated_at,CONFIG.metadataMaxAgeMinutes);
+  clearLayer();
+  attachWms(name,false,time);
+  $("updated").textContent=time.replace("T"," ")
+   .replace("Z"," UTC");
+  $("details").textContent=(selected==="rgb"
+   ?"Geo Colour EUMETSAT. ":"IR 10.5 µm EUMETSAT. ")+
+   (recent?"Orario recente dichiarato dal WMS. ":
+    "Orario non recente dichiarato dal WMS. ")+
+   "PNG valido; acquisizione non verificata indipendentemente.";
+ }catch(error){
+  if(mode!==selected||token!==generation)return;
+  clearLayer();
+  $("updated").textContent="Non verificata";
+  $("details").textContent=error.message;
+  setStatus("Immagine satellitare non disponibile");
+ }
 }
 
 function setMode(next){
@@ -727,6 +781,13 @@ function setMode(next){
 
  mode=next;
  clearLayer();
+ if(next!=="lightning"){
+  clearInterval(soundTimer);
+  map.removeLayer(symbols);
+ }else{
+  symbols.addTo(map);
+  syncSound();
+ }
  liTime=null;
  liRecent=false;
  previous=null;
@@ -766,10 +827,9 @@ map.on("moveend",()=>{
  if(mode!=="lightning")return;
  previous=null;
  if(liTime&&layer){
+  // I simboli geografici restano nella loro posizione.
+  // Le nuove tile aggiornano soltanto i rilevamenti.
   tileResults.clear();
-  displayPoints=[];
-  symbols.clearLayers();
-  $("count").textContent="—";
  }
 });
 
@@ -782,7 +842,7 @@ setInterval(async()=>{
   if(mode==="lightning"){
    await updateLI();
   }else{
-   refreshSatellite();
+   await refreshSatellite();
   }
  }finally{
   refreshBusy=false;
