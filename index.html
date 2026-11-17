@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+ content="width=device-width,initial-scale=1">
+<title>Z.E.U.S. | Nowcasting Italia</title>
+
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+:root {
+  --bg:#071321;
+  --panel:#10263b;
+  --edge:#285171;
+  --blue:#58caff;
+  --text:#e5f4ff;
+  --muted:#9bb6c9;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+header {
+  padding:15px;
+  background:linear-gradient(120deg,#09192c,#143653);
+  border-bottom:1px solid var(--edge);
+}
+.brand {
+  font-size:29px;
+  font-weight:800;
+  letter-spacing:4px;
+  color:var(--blue);
+}
+.subtitle {
+  font-size:11px;
+  color:var(--muted);
+  margin-top:5px;
+}
+.toolbar {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  padding:12px;
+}
+.toolbar button {
+  padding:13px 5px;
+  background:var(--panel);
+  border:1px solid var(--edge);
+  border-radius:9px;
+  color:var(--text);
+  font-weight:bold;
+  cursor:pointer;
+}
+.toolbar button.active {
+  background:#17517b;
+  border-color:var(--blue);
+  box-shadow:0 0 12px #2d9fdf55;
+}
+#map {
+  height:58vh;
+  min-height:330px;
+  background:#071827;
+}
+.panel {
+  margin:12px;
+  padding:14px;
+  background:var(--panel);
+  border:1px solid var(--edge);
+  border-radius:10px;
+}
+.panel h3 {
+  margin:0 0 10px;
+  color:var(--blue);
+  font-size:14px;
+}
+.info {
+  font-size:13px;
+  line-height:1.7;
+}
+.muted {color:var(--muted)}
+.status {
+  display:inline-block;
+  padding:4px 8px;
+  border:1px solid #597085;
+  border-radius:6px;
+  color:#c5d8e6;
+  font-size:11px;
+}
+footer {
+  padding:15px;
+  text-align:center;
+  font-size:11px;
+  color:var(--muted);
+}
+.leaflet-container {background:#071827}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">⚡ Z.E.U.S.</div>
+  <div class="subtitle">
+    Zonal Electrical Unrest Surveillance
+  </div>
+  <div class="subtitle">
+    NOWCASTING ITALIA — Osservazione satellitare
+  </div>
+</header>
+
+<div class="toolbar">
+  <button id="btn-lightning" class="active"
+    onclick="setMode('lightning')">
+    ⚡ FULMINI
+  </button>
+  <button id="btn-rgb"
+    onclick="setMode('rgb')">
+    ☁ RGB
+  </button>
+  <button id="btn-ir"
+    onclick="setMode('ir')">
+    ◉ IR
+  </button>
+</div>
+
+<div id="map"></div>
+
+<section class="panel">
+  <h3 id="panel-title">ATTIVITÀ ELETTRICA</h3>
+  <div class="info">
+    <div>
+      Stato: <span id="status"
+        class="status">In attesa dei dati</span>
+    </div>
+    <div>Fonte: <span id="source">EUMETSAT MTG LI</span></div>
+    <div>Ultima osservazione:
+      <span id="updated">Non disponibile</span>
+    </div>
+    <div id="count-row">
+      Fulmini osservati:
+      <strong id="count">—</strong>
+    </div>
+    <div id="details" class="muted"></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>INTEGRAZIONE SCIENTIFICA</h3>
+  <div class="info">
+    Osservazioni reali EUMETSAT.
+    Esportazione predisposta per
+    S.I.B.I.L.L.A. e A.T.E.N.A.
+    Nessun dato simulato.
+  </div>
+</section>
+
+<footer>
+  © Nowcasting Italia<br>
+  Dati satellitari: EUMETSAT<br>
+  Attribuzioni aggiuntive secondo il prodotto utilizzato.
+</footer>
+
+<script src=
+"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+<script>
+"use strict";
+
+const CONFIG = {
+  observations:"data/latest.json",
+  refreshMs:300000,
+  maxAgeMinutes:90,
+  // Da compilare dopo verifica GetCapabilities.
+  wmsUrl:"",
+  rgbLayer:"",
+  irLayer:""
+};
+
+const map=L.map("map",{
+  preferCanvas:true,
+  zoomControl:true
+}).setView([41.8,13.5],5);
+
+L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  {
+    attribution:
+      '&copy; OpenStreetMap contributors, &copy; CARTO',
+    maxZoom:18
+  }
+).addTo(map);
+
+const lightningLayer=L.layerGroup().addTo(map);
+let satelliteLayer=null;
+let mode="lightning";
+let latest=null;
+
+const $=id=>document.getElementById(id);
+
+function status(text) {
+  $("status").textContent=text;
+}
+
+function setMode(next) {
+  mode=next;
+
+  ["lightning","rgb","ir"].forEach(id=>{
+    $("btn-"+id).classList.toggle("active",id===next);
+  });
+
+  lightningLayer.clearLayers();
+
+  if(satelliteLayer) {
+    map.removeLayer(satelliteLayer);
+    satelliteLayer=null;
+  }
+
+  if(next==="lightning") {
+    $("panel-title").textContent="ATTIVITÀ ELETTRICA";
+    $("source").textContent="EUMETSAT MTG LI";
+    $("count-row").hidden=false;
+    renderLightning();
+    return;
+  }
+
+  $("panel-title").textContent=
+    next==="rgb"?"SATELLITE RGB":"SATELLITE IR";
+
+  $("source").textContent=
+    next==="rgb"?"EUMETSAT GeoColour":
+                 "EUMETSAT Dust RGB";
+
+  $("count-row").hidden=true;
+  $("updated").textContent="Non disponibile";
+
+  const layerName=
+    next==="rgb"?CONFIG.rgbLayer:CONFIG.irLayer;
+
+  if(!CONFIG.wmsUrl || !layerName) {
+    status("Layer in attesa di configurazione");
+    $("details").textContent=
+      "Il servizio ufficiale deve essere verificato.";
+    return;
+  }
+
+  satelliteLayer=L.tileLayer.wms(CONFIG.wmsUrl,{
+    layers:layerName,
+    format:"image/png",
+    transparent:true,
+    version:"1.3.0",
+    attribution:"EUMETSAT"
+  }).addTo(map);
+
+  status("Richiesta immagini satellitari");
+  $("details").textContent=
+    "Immagini caricate su richiesta. " +
+    "La disponibilità dipende dal servizio EUMETSAT.";
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#39;"
+  })[c]);
+}
+
+function validPoint(p) {
+  return p &&
+    Number.isFinite(p.lat) &&
+    Number.isFinite(p.lon) &&
+    p.lat>=-90 && p.lat<=90 &&
+    p.lon>=-180 && p.lon<=180;
+}
+
+function renderLightning() {
+  if(mode!=="lightning") return;
+
+  lightningLayer.clearLayers();
+  $("details").textContent="";
+
+  if(!latest || latest.status!=="ok") {
+    status("Nessuna osservazione valida");
+    $("updated").textContent="Non disponibile";
+    $("count").textContent="—";
+    return;
+  }
+
+  const t=Date.parse(latest.observed_at);
+  const age=(Date.now()-t)/60000;
+
+  if(!Number.isFinite(t) ||
+     age<0 || age>CONFIG.maxAgeMinutes) {
+    status("Osservazioni non aggiornate");
+    $("updated").textContent=
+      latest.observed_at || "Non disponibile";
+    $("count").textContent="—";
+    return;
+  }
+
+  const points=Array.isArray(latest.flashes)
+    ?latest.flashes.filter(validPoint):[];
+
+  for(const p of points) {
+    const marker=L.circleMarker([p.lat,p.lon],{
+      radius:5,
+      color:"#ffffff",
+      weight:1,
+      fillColor:"#57ceff",
+      fillOpacity:0.85
+    });
+
+    const time=p.time_utc || latest.observed_at;
+
+    marker.bindPopup(
+      "<strong>Fulmine osservato</strong><br>"+
+      "Fonte: EUMETSAT MTG LI<br>"+
+      "UTC: "+escapeHtml(time)
+    );
+
+    marker.addTo(lightningLayer);
+  }
+
+  status("Osservazioni disponibili");
+  $("updated").textContent=latest.observed_at;
+  $("count").textContent=points.length;
+  $("details").textContent=
+    "Eventi nel prodotto pubblicato. " +
+    "La classificazione nube-terra/non nube-terra " +
+    "non è dedotta dal sensore ottico.";
+}
+
+async function loadObservations() {
+  try {
+    const response=await fetch(
+      CONFIG.observations+"?t="+Date.now(),
+      {cache:"no-store"}
+    );
+
+    if(!response.ok) {
+      throw new Error("HTTP "+response.status);
+    }
+
+    const data=await response.json();
+
+    if(data.schema_version!==1 ||
+       !["ok","unavailable"].includes(data.status)) {
+      throw new Error("Schema JSON non valido");
+    }
+
+    latest=data;
+
+  } catch(error) {
+    latest=null;
+    console.warn("ZEUS:",error.message);
+  }
+
+  if(mode==="lightning") renderLightning();
+}
+
+loadObservations();
+setInterval(loadObservations,CONFIG.refreshMs);
+</script>
+</body>
+</html>
