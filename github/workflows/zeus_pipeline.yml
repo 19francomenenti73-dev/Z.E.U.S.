@@ -1,0 +1,95 @@
+name: ZEUS Satellite Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,37 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-satellite-pipeline
+  cancel-in-progress: false
+
+jobs:
+  zeus:
+    name: ZEUS Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Execute ZEUS pipeline
+        run: |
+          python backend/zeus_pipeline.py
+
+      - name: Validate generated files
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              "data/latest.json",
+              "data/satellite.json",
+              "data/sibilla_feed.json"
+          ]
+
+          for filename in required:
+              path = Path(filename)
+              assert path.is_file(), filename
+              with path.open(encoding="utf-8") as f:
+                  data = json.load(f)
+              assert data["schema_version"] == 1
+              print("VALID:", filename)
+
+          with open(
+              "data/latest.json", encoding="utf-8"
+          ) as f:
+              latest = json.load(f)
+
+          assert latest["status"] == "unavailable"
+          assert latest["flashes"] == []
+
+          with open(
+              "data/sibilla_feed.json",
+              encoding="utf-8"
+          ) as f:
+              sibilla = json.load(f)
+
+          assert sibilla["usable_for_forecasting"] is False
+          assert sibilla["forecast_horizons_modified"] is False
+          print("ZEUS validation completed")
+          PY
+
+      - name: Commit observation metadata
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            data/latest.json \
+            data/satellite.json \
+            data/sibilla_feed.json
+
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+            exit 0
+          fi
+
+          git commit -m "ZEUS update satellite metadata"
+
+          git pull --rebase origin main
+          git push origin HEAD:main
+          
