@@ -123,7 +123,7 @@ footer{
   </div>
   <div>
    Ultima osservazione:
-   <span id="updated">Non disponibile</span>
+   <span id="updated">Non verificata</span>
   </div>
   <div id="count-row">
    Fulmini individuali osservati:
@@ -157,8 +157,11 @@ footer{
 
 const CONFIG={
  observations:"data/latest.json",
+ satellite:"data/satellite.json",
  refreshMs:300000,
  maxAgeMinutes:90,
+ liMaxAgeMinutes:30,
+ metadataMaxAgeMinutes:45,
  wmsUrl:"https://view.eumetsat.int/geoserver/wms",
  lightningLayer:"mtg_fd:li_afa",
  rgbLayer:"mtg_fd:rgb_geocolour",
@@ -184,6 +187,7 @@ const markers=L.layerGroup().addTo(map);
 let satelliteLayer=null;
 let mode="lightning";
 let latest=null;
+let liTime=null;
 let tileErrors=0;
 let tileLoaded=0;
 let requestId=0;
@@ -204,23 +208,70 @@ function clearSatellite(){
  tileLoaded=0;
 }
 
+function parseFreshTime(value,maxAge){
+ if(typeof value!=="string")return null;
+ const time=Date.parse(value);
+ if(!Number.isFinite(time))return null;
+ const age=(Date.now()-time)/60000;
+ if(age< -5||age>maxAge)return null;
+ return new Date(time).toISOString()
+  .replace(".000Z","Z");
+}
+
+async function readSatelliteMetadata(){
+ const response=await fetch(
+  CONFIG.satellite+"?t="+Date.now(),
+  {cache:"no-store"}
+ );
+ if(!response.ok){
+  throw new Error("Metadata HTTP "+response.status);
+ }
+ const data=await response.json();
+ if(data.schema_version!==1){
+  throw new Error("Schema satellite non valido");
+ }
+ const li=data.lightning_imager;
+ if(!li||li.layer!==CONFIG.lightningLayer||
+    li.layer_found!==true){
+  throw new Error("Layer LI non confermato");
+ }
+ if(data.status!=="capabilities_available"){
+  throw new Error("Catalogo WMS non disponibile");
+ }
+ const generated=parseFreshTime(
+  data.generated_at,CONFIG.metadataMaxAgeMinutes
+ );
+ if(!generated){
+  throw new Error("Diagnostica non aggiornata");
+ }
+ const time=parseFreshTime(
+  li.latest_advertised_time,
+  CONFIG.liMaxAgeMinutes
+ );
+ if(!time){
+  throw new Error("Acquisizione LI non recente");
+ }
+ const test=li.getmap_at_advertised_time;
+ if(!test||test.image_signature_valid!==true){
+  throw new Error("GetMap temporale non confermato");
+ }
+ return time;
+}
+
 function renderLightning(){
  if(mode!=="lightning")return;
  markers.clearLayers();
  $("count").textContent="—";
 
  if(!latest||latest.status!=="ok"){
-  $("updated").textContent="Non verificata";
   return;
  }
-
  const t=Date.parse(latest.observed_at);
  const age=(Date.now()-t)/60000;
  if(!Number.isFinite(t)||
     age<0||age>CONFIG.maxAgeMinutes){
   return;
  }
-
  const points=Array.isArray(latest.flashes)
   ?latest.flashes.filter(p=>
     p&&Number.isFinite(p.lat)&&
@@ -237,15 +288,110 @@ function renderLightning(){
    "Fulmine osservato - MTG LI"
   ).addTo(markers);
  }
-
  $("count").textContent=points.length;
- $("updated").textContent=latest.observed_at;
+}
+
+function attachWms(layerName,lightning,time){
+ const currentRequest=requestId;
+ const selectedMode=mode;
+ const options={
+  layers:layerName,
+  styles:"",
+  format:"image/png",
+  transparent:true,
+  version:"1.1.1",
+  tileSize:256,
+  opacity:lightning?1:0.85,
+  attribution:"© EUMETSAT"
+ };
+
+ if(lightning){
+  options.time=time;
+  options.maxNativeZoom=CONFIG.liNativeZoom;
+  options.maxZoom=19;
+  options.keepBuffer=3;
+  options.updateWhenZooming=false;
+  options.updateWhenIdle=true;
+ }
+
+ const layer=L.tileLayer.wms(
+  CONFIG.wmsUrl,options
+ );
+
+ layer.on("tileload",()=>{
+  if(currentRequest!==requestId||
+     mode!==selectedMode)return;
+  tileLoaded++;
+ });
+
+ layer.on("tileerror",()=>{
+  if(currentRequest!==requestId||
+     mode!==selectedMode)return;
+  tileErrors++;
+  setStatus("Errore caricamento WMS");
+ });
+
+ layer.on("load",()=>{
+  if(currentRequest!==requestId||
+     mode!==selectedMode)return;
+  if(tileErrors>0){
+   setStatus("Caricamento parziale");
+  }else if(tileLoaded>0){
+   setStatus(lightning
+    ?"LI caricato - contenuto non verificato"
+    :"Tile satellitari caricate");
+  }else{
+   setStatus("Nessuna tile confermata");
+  }
+ });
+
+ satelliteLayer=layer;
+ layer.addTo(map);
+ setStatus("Caricamento satellite");
+}
+
+async function updateLightningLayer(){
+ if(mode!=="lightning")return;
+ const token=requestId;
+ try{
+  const time=await readSatelliteMetadata();
+  if(mode!=="lightning"||
+     token!==requestId)return;
+
+  if(liTime===time&&satelliteLayer){
+   return;
+  }
+
+  clearSatellite();
+  liTime=time;
+  $("updated").textContent=
+   time.replace("T"," ").replace("Z"," UTC");
+  $("details").textContent=
+   "LI AFA: aree ottiche di attività "+
+   "elettrica, non singoli fulmini. "+
+   "Orario dichiarato dal WMS; "+
+   "contenuto e georeferenziazione "+
+   "ancora da verificare.";
+
+  attachWms(CONFIG.lightningLayer,true,time);
+ }catch(error){
+  if(mode!=="lightning"||
+     token!==requestId)return;
+  clearSatellite();
+  liTime=null;
+  $("updated").textContent="Non verificata";
+  $("details").textContent=
+   "Layer LI sospeso: "+error.message+
+   ". Nessuna immagine non verificata mostrata.";
+  setStatus("LI non disponibile");
+  console.warn("ZEUS LI:",error.message);
+ }
 }
 
 function setMode(next){
  if(!["lightning","rgb","ir"].includes(next))return;
-
  mode=next;
+
  ["lightning","rgb","ir"].forEach(id=>{
   $("btn-"+id).classList.toggle(
    "active",id===next
@@ -254,10 +400,10 @@ function setMode(next){
 
  markers.clearLayers();
  clearSatellite();
+ liTime=null;
 
  const lightning=next==="lightning";
  const rgb=next==="rgb";
-
  const layerName=lightning
   ?CONFIG.lightningLayer
   :(rgb?CONFIG.rgbLayer:CONFIG.irLayer);
@@ -276,84 +422,18 @@ function setMode(next){
 
  if(lightning){
   $("details").textContent=
-   "Layer LI AFA: aree di attività "+
-   "elettrica, non singoli fulmini. "+
-   "Data e aggiornamento non verificati. "+
-   "Zoom oltre livello 5 con dettaglio "+
-   "satellitare invariato.";
+   "Verifica dell'orario LI in corso.";
   renderLightning();
- }else{
-  $("details").textContent=
-   "Visualizzazione WMS EUMETSAT. "+
-   "Disponibilità e orario da verificare.";
- }
-
- if(!CONFIG.wmsUrl||!layerName){
-  setStatus("Layer non configurato");
+  setStatus("Controllo dati LI");
+  updateLightningLayer();
   return;
  }
 
- const currentRequest=requestId;
- const selectedMode=next;
+ $("details").textContent=
+  "Visualizzazione WMS EUMETSAT. "+
+  "Disponibilità e orario da verificare.";
 
- const options={
-  layers:layerName,
-  styles:"",
-  format:"image/png",
-  transparent:true,
-  version:"1.1.1",
-  tileSize:256,
-  opacity:lightning?1:0.85,
-  attribution:"© EUMETSAT"
- };
-
- // Solo LI: oltre zoom 5 si ingrandiscono
- // le tile del livello 5.
- // RGB e IR mantengono il comportamento
- // originale, senza limiti aggiuntivi.
- if(lightning){
-  options.maxNativeZoom=CONFIG.liNativeZoom;
-  options.maxZoom=19;
-  options.keepBuffer=3;
-  options.updateWhenZooming=false;
-  options.updateWhenIdle=true;
- }
-
- satelliteLayer=L.tileLayer.wms(
-  CONFIG.wmsUrl,
-  options
- );
-
- satelliteLayer.on("tileload",()=>{
-  if(currentRequest!==requestId||
-     mode!==selectedMode)return;
-  tileLoaded++;
- });
-
- satelliteLayer.on("tileerror",()=>{
-  if(currentRequest!==requestId||
-     mode!==selectedMode)return;
-  tileErrors++;
-  setStatus("Errore caricamento WMS");
- });
-
- satelliteLayer.on("load",()=>{
-  if(currentRequest!==requestId||
-     mode!==selectedMode)return;
-
-  if(tileErrors>0){
-   setStatus("Caricamento parziale");
-  }else if(tileLoaded>0){
-   setStatus(lightning
-    ?"Layer LI caricato - contenuto da verificare"
-    :"Tile satellitari caricate");
-  }else{
-   setStatus("Nessuna tile confermata");
-  }
- });
-
- satelliteLayer.addTo(map);
- setStatus("Caricamento satellite");
+ attachWms(layerName,false,null);
 }
 
 async function loadObservations(){
@@ -362,11 +442,9 @@ async function loadObservations(){
    CONFIG.observations+"?t="+Date.now(),
    {cache:"no-store"}
   );
-
   if(!response.ok){
    throw new Error("HTTP "+response.status);
   }
-
   const data=await response.json();
   if(data.schema_version!==1||
      !["ok","unavailable"].includes(data.status)){
@@ -377,15 +455,21 @@ async function loadObservations(){
   latest=null;
   console.warn("ZEUS:",error.message);
  }
-
  if(mode==="lightning"){
   renderLightning();
  }
 }
 
-loadObservations();
+async function refresh(){
+ await loadObservations();
+ if(mode==="lightning"){
+  await updateLightningLayer();
+ }
+}
+
 setMode("lightning");
-setInterval(loadObservations,CONFIG.refreshMs);
+loadObservations();
+setInterval(refresh,CONFIG.refreshMs);
 </script>
 </body>
 </html>
