@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-17T13:22:40Z",
+  "generated_at": "2026-11-17T13:52:56Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -78,16 +78,26 @@
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
+    "http_date": "2026-11-17T13:53:03Z",
+    "last_modified": null,
+    "cache_control": "public, max-age=120",
+    "etag": null,
     "response_bytes": 244972,
     "xml_root": "WMT_MS_Capabilities"
   },
   "lightning_imager": {
     "layer": "mtg_fd:li_afa",
     "layer_found": true,
-    "time_dimension_present": false,
-    "latest_advertised_time": null,
-    "age_minutes": null,
+    "time_dimension_present": true,
+    "time_dimension": {
+      "tag": "Extent",
+      "value": "2025-05-30T15:00:00.000Z/2026-11-17T13:40:00.000Z/PT5M",
+      "default": "2026-11-17T13:40:00Z"
+    },
+    "latest_advertised_time": "2026-11-17T13:40:00Z",
+    "age_minutes": 12.9,
     "freshness_verified": false,
+    "safe_for_nowcasting": false,
     "getmap": {
       "attempted": true,
       "http_status": 200,
@@ -96,9 +106,32 @@
       "image_signature_valid": true,
       "image_width": 256,
       "image_height": 256,
+      "observation_time_verified": false,
+      "pixel_content_verified": false,
       "error_type": null,
-      "error_message": null
+      "error_message": null,
+      "http_date": "2026-11-17T13:53:03Z",
+      "last_modified": "2026-11-17T13:11:36Z",
+      "cache_control": "max-age=604800",
+      "etag": null
     },
-    "status": "image_response_unverified_time"
+    "status": "recent_time_advertised_not_verified",
+    "getmap_at_advertised_time": {
+      "attempted": true,
+      "http_status": 200,
+      "content_type": "image/png",
+      "response_bytes": 7213,
+      "image_signature_valid": true,
+      "image_width": 256,
+      "image_height": 256,
+      "observation_time_verified": false,
+      "pixel_content_verified": false,
+      "error_type": null,
+      "error_message": null,
+      "http_date": "2026-11-17T13:53:04Z",
+      "last_modified": "2026-11-17T13:48:20Z",
+      "cache_control": "max-age=604800",
+      "etag": null
+    }
   }
 }
