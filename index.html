@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -18,8 +19,8 @@
  --muted:#9bb6c9;
 }
 *{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
 body{
- margin:0;
  background:var(--bg);
  color:var(--text);
  font-family:Arial,sans-serif;
@@ -43,7 +44,7 @@ header{
 .toolbar,.controls{
  display:grid;
  grid-template-columns:repeat(3,minmax(0,1fr));
- gap:7px;
+ gap:8px;
  padding:10px;
 }
 button{
@@ -59,6 +60,9 @@ button{
 button.active{
  background:#17517b;
  border-color:var(--blue);
+}
+button:focus-visible{
+ outline:2px solid white;
 }
 #map{
  height:60vh;
@@ -81,16 +85,11 @@ button.active{
  font-size:13px;
  line-height:1.7;
 }
-.muted{
- color:var(--muted);
-}
+.muted{color:var(--muted)}
 .notice{
  font-size:12px;
  line-height:1.6;
  color:#bcd2e2;
-}
-.controls{
- padding:8px 0;
 }
 .flash-icon{
  background:transparent;
@@ -99,25 +98,32 @@ button.active{
 .flash-symbol{
  display:block;
  font-size:30px;
- line-height:34px;
- font-weight:bold;
+ line-height:36px;
  text-align:center;
- animation:flashPulse 1.6s ease-in-out infinite;
- text-shadow:
-  0 0 3px #111,
-  0 0 8px currentColor;
+ font-weight:bold;
+ animation:zeusPulse 1.5s ease-in-out infinite;
+ filter:drop-shadow(0 0 3px #111);
 }
-.flash-symbol.yellow{color:#ffdc32}
-.flash-symbol.orange{color:#ff951f}
-.flash-symbol.red{color:#ff3434}
-@keyframes flashPulse{
+.flash-symbol.yellow{
+ color:#ffdf25;
+ text-shadow:0 0 10px #ffdf25;
+}
+.flash-symbol.orange{
+ color:#ff8b16;
+ text-shadow:0 0 10px #ff8b16;
+}
+.flash-symbol.red{
+ color:#ff3434;
+ text-shadow:0 0 12px #ff3434;
+}
+@keyframes zeusPulse{
  0%,100%{
   opacity:.65;
   transform:scale(.85);
  }
  50%{
   opacity:1;
-  transform:scale(1.25);
+  transform:scale(1.22);
  }
 }
 @media(prefers-reduced-motion:reduce){
@@ -132,6 +138,7 @@ footer{
 .leaflet-control-attribution{
  font-size:9px!important;
 }
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -147,55 +154,75 @@ footer{
 
 <div class="toolbar">
  <button id="btn-lightning" class="active"
-  onclick="setMode('lightning')">⚡ FULMINI</button>
- <button id="btn-rgb"
-  onclick="setMode('rgb')">☁ RGB</button>
- <button id="btn-ir"
-  onclick="setMode('ir')">◉ IR</button>
+  onclick="setMode('lightning')">
+  ⚡ FULMINI
+ </button>
+ <button id="btn-rgb" onclick="setMode('rgb')">
+  ☁ RGB
+ </button>
+ <button id="btn-ir" onclick="setMode('ir')">
+  ◉ IR
+ </button>
 </div>
 
 <div id="map"></div>
 
 <section class="panel">
- <h3 id="panel-title">ATTIVITÀ ELETTRICA LI AFA</h3>
+ <h3 id="panel-title">
+  ATTIVITÀ ELETTRICA LI AFA
+ </h3>
  <div id="controls" class="controls">
   <button id="btn-symbols" class="active"
-   onclick="toggleSymbols()">⚡ SIMBOLI ON</button>
+   onclick="toggleSymbols()">
+   ⚡ SIMBOLI ON
+  </button>
   <button id="btn-audio"
-   onclick="toggleAudio()">🔇 AUDIO OFF</button>
-  <button onclick="testAudio()">♫ TEST AUDIO</button>
+   onclick="toggleAudio()">
+   🔇 AUDIO OFF
+  </button>
+  <button onclick="testAudio()">
+   ⚡ TEST SCARICA
+  </button>
  </div>
  <div class="info">
-  <div>Stato: <strong id="status">Caricamento</strong></div>
-  <div>Fonte: <span id="source">EUMETSAT MTG LI AFA</span></div>
-  <div>Orario WMS:
+  <div>
+   Stato:
+   <strong id="status">Caricamento</strong>
+  </div>
+  <div>
+   Fonte:
+   <span id="source">EUMETSAT MTG LI AFA</span>
+  </div>
+  <div>
+   Orario WMS:
    <span id="updated">Non disponibile</span>
   </div>
-  <div>Aree grafiche rilevate:
+  <div id="count-row">
+   Aree grafiche individuate:
    <strong id="count">—</strong>
   </div>
   <div id="details" class="muted"></div>
  </div>
  <p id="legend" class="notice">
   ⚡ Giallo · ⚡ Arancione · ⚡ Rosso:
-  colori individuati nell'immagine WMS.
-  Non sono classi ufficiali di intensità
-  né posizioni di singoli fulmini.
+  colori grafici riconosciuti nel raster.
+  Non indicano intensità elettriche
+  ufficiali né singoli fulmini.
  </p>
  <p id="audio-note" class="notice">
-  Audio automatico solo per nuova attività
-  rilevata tra immagini recenti.
-  Il tasto TEST verifica l'altoparlante.
+  Audio automatico solo con immagini
+  recenti, confrontabili e nuove aree
+  grafiche individuate.
  </p>
 </section>
 
 <section class="panel">
  <h3>INTEGRAZIONE SCIENTIFICA</h3>
  <div class="info">
-  Dati satellitari © EUMETSAT.
+  Dati satellitari EUMETSAT.
   Nessun fulmine individuale simulato.
-  Nessun dato grafico derivato viene
-  inviato a S.I.B.I.L.L.A.
+  Le analisi grafiche sperimentali non
+  vengono inviate a S.I.B.I.L.L.A.
  </div>
 </section>
 
@@ -223,7 +250,10 @@ const CONFIG={
 };
 
 const $=id=>document.getElementById(id);
-const map=L.map("map").setView([41.8,13.5],5);
+
+const map=L.map("map",{
+ preferCanvas:true
+}).setView([41.8,13.5],5);
 
 L.tileLayer(
  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -234,54 +264,60 @@ L.tileLayer(
 ).addTo(map);
 
 const symbols=L.layerGroup().addTo(map);
-let layer=null;
+
 let mode="lightning";
-let requestId=0;
-let currentTime=null;
-let currentFresh=false;
+let layer=null;
+let generation=0;
+let liTime=null;
+let liRecent=false;
 let showSymbols=true;
 let audioEnabled=false;
 let audioContext=null;
-let pixelReadable=true;
-let scanPoints=[];
-let previousPoints=null;
-let previousTime=null;
-let previousView=null;
+let analysisAllowed=true;
+let tileResults=new Map();
+let displayPoints=[];
+let previous=null;
 let scanTimer=null;
-let scanCompleted=false;
-let currentView=null;
+let loadedTiles=0;
+let failedTiles=0;
 
-function status(text){
- $("status").textContent=text;
+function setStatus(message){
+ $("status").textContent=message;
 }
 
-function fresh(value,minutes){
+function isFresh(value,maxMinutes){
+ if(typeof value!=="string")return false;
  const t=Date.parse(value);
  if(!Number.isFinite(t))return false;
  const age=(Date.now()-t)/60000;
- return age>=-5&&age<=minutes;
+ return age>=-5&&age<=maxMinutes;
 }
 
-function viewKey(){
- const c=map.getCenter();
+function currentBoundsKey(){
+ const b=map.getBounds();
+ const round=n=>Math.round(n*100)/100;
  return [
-  Math.round(c.lat*10),
-  Math.round(c.lng*10),
-  map.getZoom()
+  map.getZoom(),
+  round(b.getSouth()),
+  round(b.getWest()),
+  round(b.getNorth()),
+  round(b.getEast())
  ].join(":");
 }
 
 function clearLayer(){
- requestId++;
+ generation++;
+ clearTimeout(scanTimer);
  if(layer){
   map.removeLayer(layer);
   layer=null;
  }
- clearTimeout(scanTimer);
  symbols.clearLayers();
- scanPoints=[];
- scanCompleted=false;
- pixelReadable=true;
+ tileResults.clear();
+ displayPoints=[];
+ analysisAllowed=true;
+ loadedTiles=0;
+ failedTiles=0;
  $("count").textContent="—";
 }
 
@@ -292,14 +328,10 @@ function toggleSymbols(){
  );
  $("btn-symbols").textContent=showSymbols
   ?"⚡ SIMBOLI ON":"⚡ SIMBOLI OFF";
- if(!showSymbols){
-  symbols.clearLayers();
- }else{
-  drawSymbols(scanPoints);
- }
+ drawSymbols(displayPoints);
 }
 
-async function ensureAudio(){
+async function initializeAudio(){
  const AudioClass=
   window.AudioContext||window.webkitAudioContext;
  if(!AudioClass)return false;
@@ -310,18 +342,18 @@ async function ensureAudio(){
   await audioContext.resume();
   return audioContext.state==="running";
  }catch(error){
-  console.warn("Audio:",error);
+  console.warn("ZEUS audio:",error);
   return false;
  }
 }
 
 async function toggleAudio(){
- audioEnabled=!audioEnabled;
  if(audioEnabled){
-  const ready=await ensureAudio();
-  if(!ready){
-   audioEnabled=false;
-   status("Audio non disponibile");
+  audioEnabled=false;
+ }else{
+  audioEnabled=await initializeAudio();
+  if(!audioEnabled){
+   setStatus("Audio non disponibile");
   }
  }
  $("btn-audio").classList.toggle(
@@ -331,183 +363,222 @@ async function toggleAudio(){
   ?"🔊 AUDIO ON":"🔇 AUDIO OFF";
 }
 
-function beep(){
+function electricCrack(){
  if(!audioContext||
     audioContext.state!=="running")return;
- const t=audioContext.currentTime;
- const osc=audioContext.createOscillator();
- const gain=audioContext.createGain();
- osc.type="sine";
- osc.frequency.setValueAtTime(740,t);
- osc.frequency.exponentialRampToValueAtTime(
-  420,t+.22
+
+ const ctx=audioContext;
+ const start=ctx.currentTime;
+ const duration=.43;
+ const length=Math.ceil(
+  ctx.sampleRate*duration
  );
- gain.gain.setValueAtTime(.0001,t);
+ const buffer=ctx.createBuffer(
+  1,length,ctx.sampleRate
+ );
+ const samples=buffer.getChannelData(0);
+
+ // Rumore impulsivo: nessuna nota musicale.
+ for(let i=0;i<length;i++){
+  const t=i/ctx.sampleRate;
+  const decay=Math.exp(-t*13);
+  const burst=
+   Math.exp(-Math.pow((t-.035)/.012,2))+
+   .75*Math.exp(-Math.pow((t-.12)/.018,2))+
+   .55*Math.exp(-Math.pow((t-.24)/.025,2));
+  samples[i]=(
+   Math.random()*2-1
+  )*decay*(.25+burst);
+ }
+
+ const source=ctx.createBufferSource();
+ source.buffer=buffer;
+
+ const filter=ctx.createBiquadFilter();
+ filter.type="highpass";
+ filter.frequency.value=180;
+
+ const compressor=ctx.createDynamicsCompressor();
+ compressor.threshold.value=-18;
+ compressor.ratio.value=5;
+
+ const gain=ctx.createGain();
+ gain.gain.setValueAtTime(.0001,start);
+ gain.gain.linearRampToValueAtTime(
+  .42,start+.008
+ );
  gain.gain.exponentialRampToValueAtTime(
-  .12,t+.025
+  .0001,start+duration
  );
- gain.gain.exponentialRampToValueAtTime(
-  .0001,t+.24
- );
- osc.connect(gain);
- gain.connect(audioContext.destination);
- osc.start(t);
- osc.stop(t+.25);
+
+ source.connect(filter);
+ filter.connect(compressor);
+ compressor.connect(gain);
+ gain.connect(ctx.destination);
+ source.start(start);
+ source.stop(start+duration);
 }
 
 async function testAudio(){
- if(await ensureAudio()){
-  beep();
+ if(await initializeAudio()){
+  electricCrack();
  }else{
-  status("Test audio non disponibile");
+  setStatus("Audio non disponibile");
  }
 }
  
-function colorClass(r,g,b,a){
- if(a<120)return null;
+function classifyPixel(r,g,b,a){
+ if(a<28)return null;
+
  const max=Math.max(r,g,b);
  const min=Math.min(r,g,b);
- if(max-min<65)return null;
+ if(max-min<45)return null;
 
- // Selezione cromatica del PNG, non dBZ
- // né intensità elettrica ufficiale.
- if(r>155&&r>g*1.3&&r>b*1.6){
+ // Classificazione dei colori dell'immagine.
+ // Non rappresenta intensità fisiche.
+ if(r>145&&r>g*1.35&&r>b*1.5){
   return "red";
  }
- if(r>165&&g>65&&g<185&&b<110){
+ if(r>145&&g>55&&g<190&&b<125){
   return "orange";
  }
- if(r>155&&g>140&&b<125){
+ if(r>145&&g>125&&b<145){
   return "yellow";
  }
  return null;
 }
 
-function inspectTile(img,coords){
- if(!pixelReadable||mode!=="lightning")return;
- if(!img||!img.naturalWidth)return;
-
+function analyzeTile(image,coords){
  const canvas=document.createElement("canvas");
  canvas.width=256;
  canvas.height=256;
  const ctx=canvas.getContext(
   "2d",{willReadFrequently:true}
  );
- if(!ctx)return;
+ if(!ctx)return null;
 
- let data;
+ let pixels;
  try{
-  ctx.drawImage(img,0,0,256,256);
-  data=ctx.getImageData(
+  ctx.drawImage(image,0,0,256,256);
+  pixels=ctx.getImageData(
    0,0,256,256
   ).data;
  }catch(error){
-  // Il WMS può non autorizzare
-  // la lettura dei pixel cross-origin.
-  pixelReadable=false;
-  scanPoints=[];
-  symbols.clearLayers();
-  $("count").textContent="—";
-  status("LI visibile - analisi pixel non consentita");
-  return;
+  analysisAllowed=false;
+  return null;
  }
 
- const step=8;
- const cols=32;
- const rows=32;
- const visited=new Set();
+ // Campionamento a 4 px: più sensibile
+ // alle piccole macchie LI.
+ const step=4;
+ const side=64;
+ const labels=new Uint8Array(side*side);
+ const visited=new Uint8Array(side*side);
+ const kinds=["","yellow","orange","red"];
 
- function sample(x,y){
-  const i=(y*step*256+x*step)*4;
-  return colorClass(
-   data[i],data[i+1],data[i+2],data[i+3]
-  );
+ for(let y=0;y<side;y++){
+  for(let x=0;x<side;x++){
+   const px=x*step+2;
+   const py=y*step+2;
+   const i=(py*256+px)*4;
+   const kind=classifyPixel(
+    pixels[i],pixels[i+1],
+    pixels[i+2],pixels[i+3]
+   );
+   labels[y*side+x]=kind
+    ?kinds.indexOf(kind):0;
+  }
  }
 
- for(let y=0;y<rows;y++){
-  for(let x=0;x<cols;x++){
-   const key=y*cols+x;
-   if(visited.has(key))continue;
-   const kind=sample(x,y);
-   if(!kind)continue;
+ const result=[];
 
-   const queue=[[x,y]];
-   visited.add(key);
+ for(let y=0;y<side;y++){
+  for(let x=0;x<side;x++){
+   const first=y*side+x;
+   if(!labels[first]||visited[first])continue;
+
+   const queue=[first];
+   const kind=labels[first];
+   visited[first]=1;
    let sx=0,sy=0,n=0;
 
    for(let q=0;q<queue.length;q++){
-    const [cx,cy]=queue[q];
+    const cell=queue[q];
+    const cx=cell%side;
+    const cy=Math.floor(cell/side);
     sx+=cx;
     sy+=cy;
     n++;
 
-    for(const [dx,dy] of [
-     [1,0],[-1,0],[0,1],[0,-1]
-    ]){
-     const nx=cx+dx,ny=cy+dy;
-     if(nx<0||ny<0||
-        nx>=cols||ny>=rows)continue;
-     const nk=ny*cols+nx;
-     if(visited.has(nk))continue;
-     if(sample(nx,ny)!==kind)continue;
-     visited.add(nk);
-     queue.push([nx,ny]);
+    const neighbors=[];
+    if(cx>0)neighbors.push(cell-1);
+    if(cx<side-1)neighbors.push(cell+1);
+    if(cy>0)neighbors.push(cell-side);
+    if(cy<side-1)neighbors.push(cell+side);
+
+    for(const next of neighbors){
+     if(visited[next]||
+        labels[next]!==kind)continue;
+     visited[next]=1;
+     queue.push(next);
     }
    }
 
-   // Escludiamo pixel isolati.
-   if(n<4)continue;
+   // Due campioni contigui bastano.
+   if(n<2)continue;
 
-   const px=coords.x*256+
-    (sx/n)*step+step/2;
-   const py=coords.y*256+
-    (sy/n)*step+step/2;
-   const latlng=map.unproject(
+   const px=coords.x*256+(sx/n)*step+2;
+   const py=coords.y*256+(sy/n)*step+2;
+   const point=map.unproject(
     L.point(px,py),coords.z
    );
 
-   if(!Number.isFinite(latlng.lat)||
-      !Number.isFinite(latlng.lng))continue;
+   if(!Number.isFinite(point.lat)||
+      !Number.isFinite(point.lng))continue;
 
-   scanPoints.push({
-    lat:latlng.lat,
-    lng:latlng.lng,
-    kind,
+   result.push({
+    lat:point.lat,
+    lng:point.lng,
+    kind:kinds[kind],
     size:n
    });
   }
  }
+
+ return result;
 }
 
 function consolidate(points){
- const sorted=[...points].sort(
+ const ordered=[...points].sort(
   (a,b)=>b.size-a.size
  );
- const result=[];
+ const output=[];
 
- for(const p of sorted){
-  const here=L.latLng(p.lat,p.lng);
-  const nearby=result.some(q=>
-   here.distanceTo(
+ for(const p of ordered){
+  const center=L.latLng(p.lat,p.lng);
+  const duplicate=output.some(q=>
+   center.distanceTo(
     L.latLng(q.lat,q.lng)
-   )<55000
+   )<30000
   );
-  if(!nearby)result.push(p);
-  if(result.length>=30)break;
+  if(duplicate)continue;
+  output.push(p);
+  if(output.length>=30)break;
  }
- return result;
+ return output;
 }
 
 function drawSymbols(points){
  symbols.clearLayers();
- if(!showSymbols||mode!=="lightning")return;
+ if(mode!=="lightning"||
+    !showSymbols)return;
 
  for(const p of points){
   const icon=L.divIcon({
    className:"flash-icon",
    html:
-    '<span class="flash-symbol '+p.kind+
-    '">⚡</span>',
+    '<span class="flash-symbol '+
+    p.kind+'">⚡</span>',
    iconSize:[36,36],
    iconAnchor:[18,18]
   });
@@ -516,60 +587,78 @@ function drawSymbols(points){
    icon,
    keyboard:true
   }).bindPopup(
-   "Area cromatica LI AFA rilevata. "+
-   "Colore: "+p.kind+". "+
-   "Non rappresenta un fulmine individuale."
+   "Area cromatica LI AFA. "+
+   "Colore grafico: "+p.kind+". "+
+   "Non è un fulmine individuale."
   ).addTo(symbols);
  }
 }
 
-function finishScan(){
- if(mode!=="lightning"||
-    !pixelReadable)return;
+function finishAnalysis(){
+ if(mode!=="lightning")return;
 
- const points=consolidate(scanPoints);
- scanPoints=points;
- scanCompleted=true;
+ if(!analysisAllowed){
+  symbols.clearLayers();
+  displayPoints=[];
+  $("count").textContent="—";
+  setStatus(
+   "LI visibile - lettura pixel bloccata dal WMS"
+  );
+  previous=null;
+  return;
+ }
+
+ const all=[];
+ for(const item of tileResults.values()){
+  all.push(...item);
+ }
+ const points=consolidate(all);
+ displayPoints=points;
  $("count").textContent=String(points.length);
  drawSymbols(points);
 
- if(currentFresh&&
-    previousPoints!==null&&
-    previousTime!==currentTime&&
-    previousView===currentView&&
-    points.length>0){
+ const view=currentBoundsKey();
+
+ // Confronto solo con precedente immagine
+ // della stessa inquadratura e recente.
+ if(liRecent&&previous&&
+    previous.time!==liTime&&
+    previous.view===view&&
+    loadedTiles>0&&failedTiles===0){
 
   const added=points.some(p=>{
    const here=L.latLng(p.lat,p.lng);
-   return !previousPoints.some(q=>
+   return !previous.points.some(q=>
     here.distanceTo(
      L.latLng(q.lat,q.lng)
-    )<80000
+    )<40000
    );
   });
 
-  if(added&&audioEnabled)beep();
+  if(added&&audioEnabled){
+   electricCrack();
+  }
  }
 
- // Conserviamo soltanto un confronto
- // riferito alla stessa inquadratura.
- if(currentFresh){
-  previousPoints=points;
-  previousTime=currentTime;
-  previousView=currentView;
- }else{
-  previousPoints=null;
-  previousTime=null;
-  previousView=null;
- }
+ previous=liRecent&&
+  loadedTiles>0&&failedTiles===0
+  ?{
+   time:liTime,
+   view,
+   points
+  }:null;
 
- status(currentFresh
-  ?"LI caricato - aree grafiche indicative"
-  :"Dato non recente - nessun audio automatico");
+ setStatus(
+  !liRecent
+   ?"Dato non recente - audio automatico sospeso"
+   :failedTiles
+    ?"Caricamento LI parziale"
+    :"LI caricato - analisi grafica indicativa"
+ );
 }
 
 function attachWms(name,isLI,time){
- const token=requestId;
+ const token=generation;
  const options={
   layers:name,
   styles:"",
@@ -595,39 +684,60 @@ function attachWms(name,isLI,time){
   CONFIG.wms,options
  );
 
- if(isLI){
-  next.on("tileload",event=>{
-   if(token!==requestId||
-      mode!=="lightning")return;
-   inspectTile(event.tile,event.coords);
-  });
- }
+ next.on("tileload",event=>{
+  if(token!==generation)return;
+  loadedTiles++;
+
+  if(!isLI||!analysisAllowed)return;
+
+  const coords=event.coords;
+  if(!coords)return;
+
+  const result=analyzeTile(
+   event.tile,coords
+  );
+
+  if(!analysisAllowed){
+   clearTimeout(scanTimer);
+   finishAnalysis();
+   return;
+  }
+
+  if(result){
+   const key=[
+    coords.z,coords.x,coords.y
+   ].join("/");
+   tileResults.set(key,result);
+  }
+ });
 
  next.on("tileerror",()=>{
-  if(token!==requestId)return;
-  status("Errore caricamento WMS");
+  if(token!==generation)return;
+  failedTiles++;
+  setStatus("Errore caricamento WMS");
  });
 
  next.on("load",()=>{
-  if(token!==requestId)return;
+  if(token!==generation)return;
+
   if(isLI){
    clearTimeout(scanTimer);
    scanTimer=setTimeout(
-    finishScan,350
+    finishAnalysis,300
    );
   }else{
-   status("Immagine satellitare caricata");
+   setStatus("Immagine satellitare caricata");
   }
  });
 
  layer=next;
  next.addTo(map);
- status("Caricamento satellite");
+ setStatus("Caricamento satellite");
 }
 
 async function updateLI(){
  if(mode!=="lightning")return;
- const token=requestId;
+ const token=generation;
 
  try{
   const response=await fetch(
@@ -646,68 +756,67 @@ async function updateLI(){
   if(data.schema_version!==1||
      data.status!=="capabilities_available"||
      !li||
-     li.layer_found!==true||
      li.layer!==CONFIG.li||
-     !li.getmap_at_advertised_time
-       ?.image_signature_valid){
+     li.layer_found!==true||
+     li.getmap_at_advertised_time
+       ?.image_signature_valid!==true){
    throw new Error(
     "Diagnostica LI non valida"
    );
   }
 
-  const raw=Date.parse(
+  const timestamp=Date.parse(
    li.latest_advertised_time
   );
-  if(!Number.isFinite(raw)||
-     raw>Date.now()+300000){
+  if(!Number.isFinite(timestamp)||
+     timestamp>Date.now()+300000){
    throw new Error("Orario LI non valido");
   }
 
-  const time=new Date(raw).toISOString()
+  const time=new Date(timestamp).toISOString()
    .replace(".000Z","Z");
-  const recent=fresh(
+
+  const recent=isFresh(
    time,CONFIG.maxAgeMinutes
-  )&&fresh(
+  )&&isFresh(
    data.generated_at,
    CONFIG.metadataMaxAgeMinutes
   );
 
   if(mode!=="lightning"||
-     token!==requestId)return;
+     token!==generation)return;
 
-  currentFresh=recent;
+  liRecent=recent;
   $("updated").textContent=
    time.replace("T"," ").replace("Z"," UTC");
 
   $("details").textContent=recent
    ?"Orario recente dichiarato dal WMS. "+
-    "Contenuto e georeferenziazione "+
-    "non verificati indipendentemente."
-   :"Immagine non recente: visualizzazione "+
-    "indicativa, audio automatico sospeso.";
+    "Contenuto non verificato indipendentemente."
+   :"Ultima immagine dichiarata dal WMS. "+
+    "Non rappresenta necessariamente "+
+    "l'attività elettrica attuale.";
 
-  if(currentTime===time&&layer){
-   if(!recent){
-    previousPoints=null;
-    previousTime=null;
-   }
+  if(liTime===time&&layer){
+   if(!recent)previous=null;
    return;
   }
 
   clearLayer();
-  currentTime=time;
-  currentView=viewKey();
+  liTime=time;
   attachWms(CONFIG.li,true,time);
 
  }catch(error){
   if(mode!=="lightning"||
-     token!==requestId)return;
+     token!==generation)return;
+
   clearLayer();
-  currentTime=null;
-  currentFresh=false;
+  liTime=null;
+  liRecent=false;
+  previous=null;
   $("updated").textContent="Non verificata";
   $("details").textContent=error.message;
-  status("LI non disponibile");
+  setStatus("LI non disponibile");
  }
 }
 
@@ -718,8 +827,9 @@ function setMode(next){
 
  mode=next;
  clearLayer();
- currentTime=null;
- currentFresh=false;
+ liTime=null;
+ liRecent=false;
+ previous=null;
 
  for(const name of ["lightning","rgb","ir"]){
   $("btn-"+name).classList.toggle(
@@ -731,6 +841,7 @@ function setMode(next){
  $("controls").hidden=!isLI;
  $("legend").hidden=!isLI;
  $("audio-note").hidden=!isLI;
+ $("count-row").hidden=!isLI;
 
  $("panel-title").textContent=isLI
   ?"ATTIVITÀ ELETTRICA LI AFA"
@@ -758,15 +869,23 @@ function setMode(next){
 
 map.on("moveend",()=>{
  if(mode!=="lightning")return;
- previousPoints=null;
- previousTime=null;
- previousView=null;
+ previous=null;
+ if(liTime&&layer){
+  // Leaflet carica le nuove tile.
+  // Il confronto audio riparte da zero.
+  tileResults.clear();
+  displayPoints=[];
+  symbols.clearLayers();
+  $("count").textContent="—";
+ }
 });
 
 setMode("lightning");
 
 setInterval(()=>{
- if(mode==="lightning")updateLI();
+ if(mode==="lightning"){
+  updateLI();
+ }
 },CONFIG.refreshMs);
 </script>
 </body>
