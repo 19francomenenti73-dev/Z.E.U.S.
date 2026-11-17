@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -135,8 +136,7 @@ footer{
 .leaflet-control-attribution{
  font-size:9px!important;
 }
-/* Migliora la leggibilità dei pixel LI esistenti.
-   Non crea osservazioni o nuovi dettagli spaziali. */
+/* Solo evidenziazione grafica del raster LI. */
 .zeus-li-tiles.enhanced img.leaflet-tile{
  filter:
   saturate(1.45)
@@ -203,7 +203,6 @@ footer{
  <h3 id="panel-title">
   ATTIVITÀ ELETTRICA - LI AFA
  </h3>
-
  <div id="li-controls" class="controls">
   <button id="btn-enhance"
    type="button" class="active"
@@ -218,7 +217,6 @@ footer{
    🔇 AUDIO OFF
   </button>
  </div>
-
  <div class="info">
   <div>
    Stato:
@@ -240,7 +238,6 @@ footer{
   </div>
   <div id="details" class="muted"></div>
  </div>
-
  <div id="li-legend" class="legend">
   <span class="legend-dot"></span>
   <span>
@@ -312,6 +309,7 @@ let satelliteLayer=null;
 let mode="lightning";
 let latest=null;
 let liTime=null;
+let liDisplayRecent=false;
 let tileErrors=0;
 let tileLoaded=0;
 let requestId=0;
@@ -441,24 +439,32 @@ async function readSatelliteMetadata(){
  if(data.status!=="capabilities_available"){
   throw new Error("Catalogo WMS non disponibile");
  }
- const generated=parseFreshTime(
+
+ // L'orario deve essere valido, ma non deve
+ // essere recente per mostrare l'ultima immagine.
+ const rawTime=Date.parse(li.latest_advertised_time);
+ if(!Number.isFinite(rawTime)||
+    rawTime>Date.now()+300000){
+  throw new Error("Orario LI non valido");
+ }
+ const time=new Date(rawTime).toISOString()
+  .replace(".000Z","Z");
+
+ // La freschezza resta un'informazione distinta
+ // dalla possibilità di visualizzare il layer.
+ const recent=Boolean(parseFreshTime(
+  time,CONFIG.liMaxAgeMinutes
+ ));
+ const metadataRecent=Boolean(parseFreshTime(
   data.generated_at,CONFIG.metadataMaxAgeMinutes
- );
- if(!generated){
-  throw new Error("Diagnostica non aggiornata");
- }
- const time=parseFreshTime(
-  li.latest_advertised_time,
-  CONFIG.liMaxAgeMinutes
- );
- if(!time){
-  throw new Error("Acquisizione LI non recente");
- }
+ ));
+
+ // Il controllo tecnico GetMap rimane obbligatorio.
  const test=li.getmap_at_advertised_time;
  if(!test||test.image_signature_valid!==true){
   throw new Error("GetMap temporale non confermato");
  }
- return time;
+ return {time,recent,metadataRecent};
 }
 
 function verifiedPoints(data){
@@ -607,7 +613,9 @@ function attachWms(layerName,lightning,time){
    setStatus("Caricamento parziale");
   }else if(tileLoaded>0){
    setStatus(lightning
-    ?"LI caricato - contenuto non verificato"
+    ?(liDisplayRecent
+      ?"LI caricato - contenuto non verificato"
+      :"Dato non recente - contenuto non verificato")
     :"Tile satellitari caricate");
   }else{
    setStatus("Nessuna tile confermata");
@@ -624,21 +632,30 @@ async function updateLightningLayer(){
  const token=requestId;
 
  try{
-  const time=await readSatelliteMetadata();
+  const info=await readSatelliteMetadata();
+  const {time,recent,metadataRecent}=info;
   if(mode!=="lightning"||
      token!==requestId)return;
 
   if(liTime===time&&satelliteLayer){
+   liDisplayRecent=recent&&metadataRecent;
+   setStatus(liDisplayRecent
+    ?"LI caricato - contenuto non verificato"
+    :"Dato non recente - contenuto non verificato");
    return;
   }
 
   clearSatellite();
   liTime=time;
+  liDisplayRecent=recent&&metadataRecent;
 
   $("updated").textContent=
    time.replace("T"," ").replace("Z"," UTC");
 
   $("details").textContent=
+   (liDisplayRecent
+    ?"Orario LI recente dichiarato dal WMS. "
+    :"DATO NON RECENTE: ultima immagine disponibile; non usare come attività attuale. ")+
    "LI AFA: aree ottiche di attività "+
    "elettrica, non singoli fulmini. "+
    "L'evidenziazione è solo grafica. "+
@@ -647,12 +664,18 @@ async function updateLightningLayer(){
    "ancora da verificare.";
 
   attachWms(CONFIG.lightningLayer,true,time);
+  if(!liDisplayRecent){
+   setStatus(
+    "Dato non recente - contenuto non verificato"
+   );
+  }
  }catch(error){
   if(mode!=="lightning"||
      token!==requestId)return;
 
   clearSatellite();
   liTime=null;
+  liDisplayRecent=false;
   $("updated").textContent="Non verificata";
   $("details").textContent=
    "Layer LI sospeso: "+error.message+
@@ -676,6 +699,7 @@ function setMode(next){
  markers.clearLayers();
  clearSatellite();
  liTime=null;
+ liDisplayRecent=false;
 
  const lightning=next==="lightning";
  const rgb=next==="rgb";
