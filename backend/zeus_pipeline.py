@@ -1,20 +1,20 @@
 
 #!/usr/bin/env python3
-# Z.E.U.S. V1.1 — Nowcasting Italia
-# Diagnostica EUMETView WMS
-# Feed osservativo per S.I.B.I.L.L.A.
-# Python 3.12 — solo libreria standard
-# Nessuna immagine HD, nessun dato simulato
+# Z.E.U.S. V1.2 — Nowcasting Italia
+# EUMETView WMS — XML parser sicuro
+# Integrazione osservativa S.I.B.I.L.L.A.
+# Python 3.12 — nessuna dipendenza esterna
+# Nessun dato simulato — nessuna immagine HD
 
 import json
 import logging
 import os
 import re
-import socket
 import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from xml.parsers import expat
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,9 +25,10 @@ WMS_URL = os.getenv(
     "ZEUS_WMS_URL",
     "https://view.eumetsat.int/geoserver/wms"
 )
+
 TIMEOUT = 30
 MAX_RESPONSE = 16 * 1024 * 1024
-USER_AGENT = "ZEUS-NowcastingItalia/1.1"
+USER_AGENT = "ZEUS-NowcastingItalia/1.2"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +46,7 @@ def utc_now():
 def write_json(name, payload):
     DATA.mkdir(parents=True, exist_ok=True)
     path = DATA / name
+
     content = json.dumps(
         payload,
         ensure_ascii=False,
@@ -54,12 +56,14 @@ def write_json(name, payload):
 
     if path.exists():
         if path.read_text(encoding="utf-8") == content:
+            log.info("%s unchanged", name)
             return
 
     temp = path.with_suffix(".tmp")
     temp.write_text(content, encoding="utf-8")
     temp.replace(path)
-    log.info("Published %s", name)
+
+    log.info("%s published", name)
 
 
 def local_name(tag):
@@ -71,6 +75,43 @@ def child_text(node, name):
         if local_name(child.tag) == name:
             return (child.text or "").strip()
     return ""
+
+
+def parse_wms_xml(body):
+    """
+    Accepts WMS DOCTYPE declarations.
+    Rejects declared entities and external references.
+    Does not fetch external DTD resources.
+    """
+
+    builder = ET.TreeBuilder()
+    parser = expat.ParserCreate(
+        namespace_separator="}"
+    )
+
+    parser.StartElementHandler = builder.start
+    parser.EndElementHandler = builder.end
+    parser.CharacterDataHandler = builder.data
+
+    def reject_entity(*args):
+        raise ValueError(
+            "XML entity declaration rejected"
+        )
+
+    def reject_external(*args):
+        raise ValueError(
+            "External XML entity reference rejected"
+        )
+
+    parser.EntityDeclHandler = reject_entity
+    parser.ExternalEntityRefHandler = reject_external
+
+    parser.SetParamEntityParsing(
+        expat.XML_PARAM_ENTITY_PARSING_NEVER
+    )
+
+    parser.Parse(body, True)
+    return builder.close()
 
 
 def get_capabilities():
@@ -103,7 +144,8 @@ def get_capabilities():
 
     try:
         with urllib.request.urlopen(
-            request, timeout=TIMEOUT
+            request,
+            timeout=TIMEOUT
         ) as response:
             diagnostics["http_status"] = response.status
             diagnostics["content_type"] = (
@@ -115,19 +157,15 @@ def get_capabilities():
 
         if len(body) > MAX_RESPONSE:
             raise ValueError(
-                "Capabilities exceed 16 MB limit"
+                "Capabilities exceed 16 MB"
             )
 
         if not body.strip():
-            raise ValueError("Empty WMS response")
-
-        upper = body.upper()
-        if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
             raise ValueError(
-                "XML DTD or entity declaration rejected"
+                "Empty WMS response"
             )
 
-        root = ET.fromstring(body)
+        root = parse_wms_xml(body)
         root_name = local_name(root.tag)
         diagnostics["xml_root"] = root_name
 
@@ -139,11 +177,13 @@ def get_capabilities():
                 (node.text or "").strip()
                 for node in root.iter()
                 if local_name(node.tag) in (
-                    "ServiceException", "ExceptionText"
+                    "ServiceException",
+                    "ExceptionText"
                 )
             ]
+
             raise ValueError(
-                "WMS service exception: " +
+                "WMS exception: " +
                 "; ".join(messages)[:300]
             )
 
@@ -155,19 +195,29 @@ def get_capabilities():
                 "Unexpected XML root: " + root_name
             )
 
+        log.info(
+            "WMS XML accepted: %s",
+            root_name
+        )
+
         return root, diagnostics
 
     except Exception as exc:
-        diagnostics["error_type"] = type(exc).__name__
+        diagnostics["error_type"] = (
+            type(exc).__name__
+        )
         diagnostics["error_message"] = str(exc)[:400]
 
-        if isinstance(exc, urllib.error.HTTPError):
+        if isinstance(
+            exc, urllib.error.HTTPError
+        ):
             diagnostics["http_status"] = exc.code
 
         log.warning(
-            "WMS diagnostic: %s: %s",
+            "WMS error: %s: %s",
             type(exc).__name__, exc
         )
+
         return None, diagnostics
 
 
@@ -201,7 +251,8 @@ def select_candidates(layers):
 
     for layer in layers:
         label = (
-            layer["name"] + " " + layer["title"]
+            layer["name"] + " " +
+            layer["title"]
         ).lower()
 
         if re.search(
@@ -210,7 +261,9 @@ def select_candidates(layers):
         ):
             candidates["rgb"].append(layer)
 
-        if re.search(r"\bdust\b", label):
+        if re.search(
+            r"\bdust\b", label
+        ):
             candidates["dust"].append(layer)
 
         if re.search(
@@ -226,23 +279,24 @@ def select_candidates(layers):
 
 
 def validate_outputs():
-    names = (
+    for name in (
         "latest.json",
         "satellite.json",
         "sibilla_feed.json"
-    )
+    ):
+        path = DATA / name
 
-    for name in names:
-        with (DATA / name).open(
+        with path.open(
             encoding="utf-8"
         ) as handle:
             value = json.load(handle)
 
         if not isinstance(value, dict):
-            raise ValueError("Invalid JSON: " + name)
+            raise ValueError(
+                "Invalid JSON: " + name
+            )
 
-        if value.get("schema_version") != 1:
-            raise ValueError("Invalid schema: " + name)
+        assert value["schema_version"] == 1
 
     latest = json.loads(
         (DATA / "latest.json").read_text(
@@ -256,7 +310,7 @@ def validate_outputs():
 
 def main():
     now = utc_now()
-    log.info("ZEUS V1.1 started")
+    log.info("ZEUS V1.2 started")
 
     root, diagnostics = get_capabilities()
 
@@ -265,6 +319,7 @@ def main():
         "dust": [],
         "ir": []
     }
+
     layer_count = 0
     wms_status = "unavailable"
 
@@ -274,11 +329,15 @@ def main():
         layer_count = len(layers)
 
         wms_status = "capabilities_available"
-        log.info("WMS layers: %s", layer_count)
+
+        log.info(
+            "Discovered WMS layers: %s",
+            layer_count
+        )
 
         for key, values in candidates.items():
             log.info(
-                "Candidate %s layers: %s",
+                "%s candidates: %s",
                 key, len(values)
             )
 
@@ -342,7 +401,7 @@ def main():
     write_json("sibilla_feed.json", sibilla)
 
     validate_outputs()
-    log.info("ZEUS V1.1 completed")
+    log.info("ZEUS V1.2 completed")
 
 
 if __name__ == "__main__":
