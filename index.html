@@ -11,18 +11,14 @@
  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{
- --bg:#071321;
- --panel:#10263b;
- --edge:#285171;
- --blue:#58caff;
- --text:#e5f4ff;
- --muted:#9bb6c9;
+ --bg:#071321;--panel:#10263b;
+ --edge:#285171;--blue:#58caff;
+ --text:#e5f4ff;--muted:#9bb6c9;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
 body{
- background:var(--bg);
- color:var(--text);
+ background:var(--bg);color:var(--text);
  font-family:Arial,sans-serif;
 }
 header{
@@ -31,109 +27,75 @@ header{
  border-bottom:1px solid var(--edge);
 }
 .brand{
- font-size:29px;
- font-weight:800;
- letter-spacing:3px;
- color:var(--blue);
+ font-size:29px;font-weight:800;
+ letter-spacing:3px;color:var(--blue);
 }
 .subtitle{
- font-size:11px;
- color:var(--muted);
+ font-size:11px;color:var(--muted);
  margin-top:5px;
 }
 .toolbar,.controls{
  display:grid;
  grid-template-columns:repeat(3,minmax(0,1fr));
- gap:8px;
- padding:10px;
+ gap:8px;padding:10px;
 }
 button{
- padding:12px 4px;
- background:var(--panel);
+ padding:12px 4px;background:var(--panel);
  border:1px solid var(--edge);
- border-radius:9px;
- color:var(--text);
- font-size:12px;
- font-weight:bold;
- cursor:pointer;
+ border-radius:9px;color:var(--text);
+ font-size:12px;font-weight:bold;cursor:pointer;
 }
 button.active{
- background:#17517b;
- border-color:var(--blue);
+ background:#17517b;border-color:var(--blue);
 }
-button:focus-visible{
- outline:2px solid white;
-}
+button:focus-visible{outline:2px solid white}
 #map{
- height:60vh;
- min-height:330px;
+ height:60vh;min-height:330px;
  background:#dbe5e9;
 }
 .panel{
- margin:12px;
- padding:14px;
+ margin:12px;padding:14px;
  background:var(--panel);
  border:1px solid var(--edge);
  border-radius:10px;
 }
 .panel h3{
- margin:0 0 10px;
- color:var(--blue);
+ margin:0 0 10px;color:var(--blue);
  font-size:14px;
 }
-.info{
- font-size:13px;
- line-height:1.7;
-}
+.info{font-size:13px;line-height:1.7}
 .muted{color:var(--muted)}
 .notice{
- font-size:12px;
- line-height:1.6;
+ font-size:12px;line-height:1.6;
  color:#bcd2e2;
 }
-.flash-icon{
- background:transparent;
- border:0;
-}
+.flash-icon{background:transparent;border:0}
 .flash-symbol{
- display:block;
- font-size:30px;
- line-height:36px;
- text-align:center;
+ display:block;font-size:30px;
+ line-height:36px;text-align:center;
  font-weight:bold;
  animation:zeusPulse 1.5s ease-in-out infinite;
  filter:drop-shadow(0 0 3px #111);
 }
 .flash-symbol.yellow{
- color:#ffdf25;
- text-shadow:0 0 10px #ffdf25;
+ color:#ffdf25;text-shadow:0 0 10px #ffdf25;
 }
 .flash-symbol.orange{
- color:#ff8b16;
- text-shadow:0 0 10px #ff8b16;
+ color:#ff8b16;text-shadow:0 0 10px #ff8b16;
 }
 .flash-symbol.red{
- color:#ff3434;
- text-shadow:0 0 12px #ff3434;
+ color:#ff3434;text-shadow:0 0 12px #ff3434;
 }
 @keyframes zeusPulse{
- 0%,100%{
-  opacity:.65;
-  transform:scale(.85);
- }
- 50%{
-  opacity:1;
-  transform:scale(1.22);
- }
+ 0%,100%{opacity:.65;transform:scale(.85)}
+ 50%{opacity:1;transform:scale(1.22)}
 }
 @media(prefers-reduced-motion:reduce){
  .flash-symbol{animation:none}
 }
 footer{
- padding:15px;
- text-align:center;
- font-size:11px;
- color:var(--muted);
+ padding:15px;text-align:center;
+ font-size:11px;color:var(--muted);
 }
 .leaflet-control-attribution{
  font-size:9px!important;
@@ -154,48 +116,35 @@ footer{
 
 <div class="toolbar">
  <button id="btn-lightning" class="active"
-  onclick="setMode('lightning')">
-  ⚡ FULMINI
- </button>
- <button id="btn-rgb" onclick="setMode('rgb')">
-  ☁ RGB
- </button>
- <button id="btn-ir" onclick="setMode('ir')">
-  ◉ IR
- </button>
+  onclick="setMode('lightning')">⚡ FULMINI</button>
+ <button id="btn-rgb"
+  onclick="setMode('rgb')">☁ RGB</button>
+ <button id="btn-ir"
+  onclick="setMode('ir')">◉ IR</button>
 </div>
 
 <div id="map"></div>
 
 <section class="panel">
- <h3 id="panel-title">
-  ATTIVITÀ ELETTRICA LI AFA
- </h3>
+ <h3 id="panel-title">ATTIVITÀ ELETTRICA LI AFA</h3>
  <div id="controls" class="controls">
   <button id="btn-symbols" class="active"
-   onclick="toggleSymbols()">
-   ⚡ SIMBOLI ON
-  </button>
+   onclick="toggleSymbols()">⚡ SIMBOLI ON</button>
   <button id="btn-audio"
-   onclick="toggleAudio()">
-   🔇 AUDIO OFF
-  </button>
-  <button onclick="testAudio()">
-   ⚡ TEST SCARICA
-  </button>
+   onclick="toggleAudio()">🔇 AUDIO OFF</button>
+  <button onclick="testAudio()">⚡ TEST SCARICA</button>
  </div>
  <div class="info">
   <div>
-   Stato:
-   <strong id="status">Caricamento</strong>
+   Stato: <strong id="status">Caricamento</strong>
   </div>
   <div>
-   Fonte:
-   <span id="source">EUMETSAT MTG LI AFA</span>
+   Fonte: <span id="source">
+    EUMETSAT MTG LI AFA
+   </span>
   </div>
   <div>
-   Orario WMS:
-   <span id="updated">Non disponibile</span>
+   Orario: <span id="updated">Non disponibile</span>
   </div>
   <div id="count-row">
    Aree grafiche individuate:
@@ -205,24 +154,24 @@ footer{
  </div>
  <p id="legend" class="notice">
   ⚡ Giallo · ⚡ Arancione · ⚡ Rosso:
-  colori grafici riconosciuti nel raster.
-  Non indicano intensità elettriche
-  ufficiali né singoli fulmini.
+  colori grafici individuati nel raster LI.
+  Non sono classi ufficiali di intensità
+  né posizioni di fulmini individuali.
  </p>
  <p id="audio-note" class="notice">
-  Audio automatico solo con immagini
-  recenti, confrontabili e nuove aree
-  grafiche individuate.
+  Audio automatico soltanto per nuove
+  aree grafiche in immagini recenti
+  e confrontabili.
  </p>
 </section>
 
 <section class="panel">
  <h3>INTEGRAZIONE SCIENTIFICA</h3>
  <div class="info">
-  Dati satellitari EUMETSAT.
+  Dati satellitari © EUMETSAT.
   Nessun fulmine individuale simulato.
-  Le analisi grafiche sperimentali non
-  vengono inviate a S.I.B.I.L.L.A.
+  Le analisi grafiche sperimentali
+  non vengono inviate a S.I.B.I.L.L.A.
  </div>
 </section>
 
@@ -250,7 +199,6 @@ const CONFIG={
 };
 
 const $=id=>document.getElementById(id);
-
 const map=L.map("map",{
  preferCanvas:true
 }).setView([41.8,13.5],5);
@@ -280,6 +228,7 @@ let previous=null;
 let scanTimer=null;
 let loadedTiles=0;
 let failedTiles=0;
+let refreshBusy=false;
 
 function setStatus(message){
  $("status").textContent=message;
@@ -297,10 +246,8 @@ function currentBoundsKey(){
  const b=map.getBounds();
  const round=n=>Math.round(n*100)/100;
  return [
-  map.getZoom(),
-  round(b.getSouth()),
-  round(b.getWest()),
-  round(b.getNorth()),
+  map.getZoom(),round(b.getSouth()),
+  round(b.getWest()),round(b.getNorth()),
   round(b.getEast())
  ].join(":");
 }
@@ -336,9 +283,7 @@ async function initializeAudio(){
   window.AudioContext||window.webkitAudioContext;
  if(!AudioClass)return false;
  try{
-  if(!audioContext){
-   audioContext=new AudioClass();
-  }
+  if(!audioContext)audioContext=new AudioClass();
   await audioContext.resume();
   return audioContext.state==="running";
  }catch(error){
@@ -348,14 +293,8 @@ async function initializeAudio(){
 }
 
 async function toggleAudio(){
- if(audioEnabled){
-  audioEnabled=false;
- }else{
-  audioEnabled=await initializeAudio();
-  if(!audioEnabled){
-   setStatus("Audio non disponibile");
-  }
- }
+ audioEnabled=audioEnabled
+  ?false:await initializeAudio();
  $("btn-audio").classList.toggle(
   "active",audioEnabled
  );
@@ -378,7 +317,6 @@ function electricCrack(){
  );
  const samples=buffer.getChannelData(0);
 
- // Rumore impulsivo: nessuna nota musicale.
  for(let i=0;i<length;i++){
   const t=i/ctx.sampleRate;
   const decay=Math.exp(-t*13);
@@ -386,22 +324,18 @@ function electricCrack(){
    Math.exp(-Math.pow((t-.035)/.012,2))+
    .75*Math.exp(-Math.pow((t-.12)/.018,2))+
    .55*Math.exp(-Math.pow((t-.24)/.025,2));
-  samples[i]=(
-   Math.random()*2-1
-  )*decay*(.25+burst);
+  samples[i]=(Math.random()*2-1)*
+   decay*(.25+burst);
  }
 
  const source=ctx.createBufferSource();
  source.buffer=buffer;
-
  const filter=ctx.createBiquadFilter();
  filter.type="highpass";
  filter.frequency.value=180;
-
  const compressor=ctx.createDynamicsCompressor();
  compressor.threshold.value=-18;
  compressor.ratio.value=5;
-
  const gain=ctx.createGain();
  gain.gain.setValueAtTime(.0001,start);
  gain.gain.linearRampToValueAtTime(
@@ -410,7 +344,6 @@ function electricCrack(){
  gain.gain.exponentialRampToValueAtTime(
   .0001,start+duration
  );
-
  source.connect(filter);
  filter.connect(compressor);
  compressor.connect(gain);
@@ -420,22 +353,15 @@ function electricCrack(){
 }
 
 async function testAudio(){
- if(await initializeAudio()){
-  electricCrack();
- }else{
-  setStatus("Audio non disponibile");
- }
+ if(await initializeAudio())electricCrack();
+ else setStatus("Audio non disponibile");
 }
  
 function classifyPixel(r,g,b,a){
  if(a<28)return null;
-
  const max=Math.max(r,g,b);
  const min=Math.min(r,g,b);
  if(max-min<45)return null;
-
- // Classificazione dei colori dell'immagine.
- // Non rappresenta intensità fisiche.
  if(r>145&&r>g*1.35&&r>b*1.5){
   return "red";
  }
@@ -460,26 +386,20 @@ function analyzeTile(image,coords){
  let pixels;
  try{
   ctx.drawImage(image,0,0,256,256);
-  pixels=ctx.getImageData(
-   0,0,256,256
-  ).data;
+  pixels=ctx.getImageData(0,0,256,256).data;
  }catch(error){
   analysisAllowed=false;
   return null;
  }
 
- // Campionamento a 4 px: più sensibile
- // alle piccole macchie LI.
- const step=4;
- const side=64;
+ const step=4,side=64;
  const labels=new Uint8Array(side*side);
  const visited=new Uint8Array(side*side);
  const kinds=["","yellow","orange","red"];
 
  for(let y=0;y<side;y++){
   for(let x=0;x<side;x++){
-   const px=x*step+2;
-   const py=y*step+2;
+   const px=x*step+2,py=y*step+2;
    const i=(py*256+px)*4;
    const kind=classifyPixel(
     pixels[i],pixels[i+1],
@@ -491,7 +411,6 @@ function analyzeTile(image,coords){
  }
 
  const result=[];
-
  for(let y=0;y<side;y++){
   for(let x=0;x<side;x++){
    const first=y*side+x;
@@ -506,9 +425,7 @@ function analyzeTile(image,coords){
     const cell=queue[q];
     const cx=cell%side;
     const cy=Math.floor(cell/side);
-    sx+=cx;
-    sy+=cy;
-    n++;
+    sx+=cx;sy+=cy;n++;
 
     const neighbors=[];
     if(cx>0)neighbors.push(cell-1);
@@ -524,27 +441,21 @@ function analyzeTile(image,coords){
     }
    }
 
-   // Due campioni contigui bastano.
    if(n<2)continue;
-
    const px=coords.x*256+(sx/n)*step+2;
    const py=coords.y*256+(sy/n)*step+2;
    const point=map.unproject(
     L.point(px,py),coords.z
    );
-
    if(!Number.isFinite(point.lat)||
       !Number.isFinite(point.lng))continue;
 
    result.push({
-    lat:point.lat,
-    lng:point.lng,
-    kind:kinds[kind],
-    size:n
+    lat:point.lat,lng:point.lng,
+    kind:kinds[kind],size:n
    });
   }
  }
-
  return result;
 }
 
@@ -553,15 +464,13 @@ function consolidate(points){
   (a,b)=>b.size-a.size
  );
  const output=[];
-
  for(const p of ordered){
   const center=L.latLng(p.lat,p.lng);
-  const duplicate=output.some(q=>
+  if(output.some(q=>
    center.distanceTo(
     L.latLng(q.lat,q.lng)
    )<30000
-  );
-  if(duplicate)continue;
+  ))continue;
   output.push(p);
   if(output.length>=30)break;
  }
@@ -570,22 +479,17 @@ function consolidate(points){
 
 function drawSymbols(points){
  symbols.clearLayers();
- if(mode!=="lightning"||
-    !showSymbols)return;
-
+ if(mode!=="lightning"||!showSymbols)return;
  for(const p of points){
   const icon=L.divIcon({
    className:"flash-icon",
-   html:
-    '<span class="flash-symbol '+
+   html:'<span class="flash-symbol '+
     p.kind+'">⚡</span>',
    iconSize:[36,36],
    iconAnchor:[18,18]
   });
-
   L.marker([p.lat,p.lng],{
-   icon,
-   keyboard:true
+   icon,keyboard:true
   }).bindPopup(
    "Area cromatica LI AFA. "+
    "Colore grafico: "+p.kind+". "+
@@ -596,14 +500,11 @@ function drawSymbols(points){
 
 function finishAnalysis(){
  if(mode!=="lightning")return;
-
  if(!analysisAllowed){
   symbols.clearLayers();
   displayPoints=[];
   $("count").textContent="—";
-  setStatus(
-   "LI visibile - lettura pixel bloccata dal WMS"
-  );
+  setStatus("LI visibile - lettura pixel bloccata");
   previous=null;
   return;
  }
@@ -618,14 +519,10 @@ function finishAnalysis(){
  drawSymbols(points);
 
  const view=currentBoundsKey();
-
- // Confronto solo con precedente immagine
- // della stessa inquadratura e recente.
  if(liRecent&&previous&&
     previous.time!==liTime&&
     previous.view===view&&
     loadedTiles>0&&failedTiles===0){
-
   const added=points.some(p=>{
    const here=L.latLng(p.lat,p.lng);
    return !previous.points.some(q=>
@@ -634,38 +531,26 @@ function finishAnalysis(){
     )<40000
    );
   });
-
-  if(added&&audioEnabled){
-   electricCrack();
-  }
+  if(added&&audioEnabled)electricCrack();
  }
 
  previous=liRecent&&
   loadedTiles>0&&failedTiles===0
-  ?{
-   time:liTime,
-   view,
-   points
-  }:null;
+  ?{time:liTime,view,points}:null;
 
- setStatus(
-  !liRecent
-   ?"Dato non recente - audio automatico sospeso"
-   :failedTiles
-    ?"Caricamento LI parziale"
-    :"LI caricato - analisi grafica indicativa"
- );
+ setStatus(!liRecent
+  ?"Dato non recente - audio sospeso"
+  :failedTiles
+   ?"Caricamento LI parziale"
+   :"LI caricato - analisi grafica indicativa");
 }
 
 function attachWms(name,isLI,time){
  const token=generation;
  const options={
-  layers:name,
-  styles:"",
-  format:"image/png",
-  transparent:true,
-  version:"1.1.1",
-  tileSize:256,
+  layers:name,styles:"",
+  format:"image/png",transparent:true,
+  version:"1.1.1",tileSize:256,
   opacity:isLI?1:.85,
   attribution:"© EUMETSAT"
  };
@@ -680,29 +565,27 @@ function attachWms(name,isLI,time){
   options.updateWhenIdle=true;
  }
 
- const next=L.tileLayer.wms(
-  CONFIG.wms,options
- );
+ // Il parametro di cache cambia soltanto
+ // per RGB e IR. Non altera i dati LI.
+ const url=isLI
+  ?CONFIG.wms
+  :CONFIG.wms+"?zeus_refresh="+Date.now();
+
+ const next=L.tileLayer.wms(url,options);
 
  next.on("tileload",event=>{
   if(token!==generation)return;
   loadedTiles++;
-
   if(!isLI||!analysisAllowed)return;
 
   const coords=event.coords;
   if(!coords)return;
-
-  const result=analyzeTile(
-   event.tile,coords
-  );
-
+  const result=analyzeTile(event.tile,coords);
   if(!analysisAllowed){
    clearTimeout(scanTimer);
    finishAnalysis();
    return;
   }
-
   if(result){
    const key=[
     coords.z,coords.x,coords.y
@@ -719,14 +602,13 @@ function attachWms(name,isLI,time){
 
  next.on("load",()=>{
   if(token!==generation)return;
-
   if(isLI){
    clearTimeout(scanTimer);
-   scanTimer=setTimeout(
-    finishAnalysis,300
-   );
+   scanTimer=setTimeout(finishAnalysis,300);
   }else{
-   setStatus("Immagine satellitare caricata");
+   setStatus(failedTiles
+    ?"Caricamento satellitare parziale"
+    :"Immagine satellitare caricata");
   }
  });
 
@@ -749,20 +631,16 @@ async function updateLI(){
     "Metadata HTTP "+response.status
    );
   }
-
   const data=await response.json();
   const li=data.lightning_imager;
 
   if(data.schema_version!==1||
      data.status!=="capabilities_available"||
-     !li||
-     li.layer!==CONFIG.li||
+     !li||li.layer!==CONFIG.li||
      li.layer_found!==true||
      li.getmap_at_advertised_time
        ?.image_signature_valid!==true){
-   throw new Error(
-    "Diagnostica LI non valida"
-   );
+   throw new Error("Diagnostica LI non valida");
   }
 
   const timestamp=Date.parse(
@@ -775,7 +653,6 @@ async function updateLI(){
 
   const time=new Date(timestamp).toISOString()
    .replace(".000Z","Z");
-
   const recent=isFresh(
    time,CONFIG.maxAgeMinutes
   )&&isFresh(
@@ -789,13 +666,11 @@ async function updateLI(){
   liRecent=recent;
   $("updated").textContent=
    time.replace("T"," ").replace("Z"," UTC");
-
   $("details").textContent=recent
    ?"Orario recente dichiarato dal WMS. "+
     "Contenuto non verificato indipendentemente."
    :"Ultima immagine dichiarata dal WMS. "+
-    "Non rappresenta necessariamente "+
-    "l'attività elettrica attuale.";
+    "Non necessariamente attività attuale.";
 
   if(liTime===time&&layer){
    if(!recent)previous=null;
@@ -809,7 +684,6 @@ async function updateLI(){
  }catch(error){
   if(mode!=="lightning"||
      token!==generation)return;
-
   clearLayer();
   liTime=null;
   liRecent=false;
@@ -818,6 +692,32 @@ async function updateLI(){
   $("details").textContent=error.message;
   setStatus("LI non disponibile");
  }
+}
+
+function refreshSatellite(){
+ if(mode==="lightning")return;
+
+ const selected=mode;
+ const name=selected==="rgb"
+  ?CONFIG.rgb:CONFIG.ir;
+
+ // Nuova richiesta WMS per RGB e IR.
+ // Non cambia la posizione della mappa.
+ clearLayer();
+ attachWms(name,false,null);
+
+ const now=new Date();
+ $("updated").textContent=
+  now.toLocaleTimeString("it-IT")+
+  " - controllo, non acquisizione";
+
+ $("details").textContent=selected==="rgb"
+  ?"Geo Colour EUMETSAT giorno/notte. "+
+   "L'immagine dipende dai dati disponibili "+
+   "sul server WMS."
+  :"IR 10.5 µm EUMETSAT. "+
+   "Aggiornamento WMS richiesto; "+
+   "orario di acquisizione non verificato.";
 }
 
 function setMode(next){
@@ -846,7 +746,8 @@ function setMode(next){
  $("panel-title").textContent=isLI
   ?"ATTIVITÀ ELETTRICA LI AFA"
   :next==="rgb"
-   ?"SATELLITE RGB":"SATELLITE IR";
+   ?"SATELLITE RGB GEO COLOUR"
+   :"SATELLITE IR";
 
  $("source").textContent=isLI
   ?"EUMETSAT MTG LI AFA"
@@ -857,22 +758,14 @@ function setMode(next){
  $("updated").textContent="Non verificata";
  $("details").textContent="";
 
- if(isLI){
-  updateLI();
- }else{
-  attachWms(
-   next==="rgb"?CONFIG.rgb:CONFIG.ir,
-   false,null
-  );
- }
+ if(isLI)updateLI();
+ else refreshSatellite();
 }
 
 map.on("moveend",()=>{
  if(mode!=="lightning")return;
  previous=null;
  if(liTime&&layer){
-  // Leaflet carica le nuove tile.
-  // Il confronto audio riparte da zero.
   tileResults.clear();
   displayPoints=[];
   symbols.clearLayers();
@@ -882,9 +775,17 @@ map.on("moveend",()=>{
 
 setMode("lightning");
 
-setInterval(()=>{
- if(mode==="lightning"){
-  updateLI();
+setInterval(async()=>{
+ if(refreshBusy)return;
+ refreshBusy=true;
+ try{
+  if(mode==="lightning"){
+   await updateLI();
+  }else{
+   refreshSatellite();
+  }
+ }finally{
+  refreshBusy=false;
  }
 },CONFIG.refreshMs);
 </script>
