@@ -158,16 +158,16 @@ footer{
 <section class="panel">
  <h3>INTEGRAZIONE SCIENTIFICA</h3>
  <div class="info">
-  Osservazioni reali EUMETSAT.
-  Esportazione predisposta per
-  S.I.B.I.L.L.A. e A.T.E.N.A.
+  Dati satellitari EUMETSAT.
+  Feed predisposto per S.I.B.I.L.L.A.
+  e A.T.E.N.A.
   Nessun dato simulato.
  </div>
 </section>
 
 <footer>
  © Nowcasting Italia<br>
- Dati satellitari: EUMETSAT<br>
+ Dati satellitari © EUMETSAT<br>
  Cartografia © OpenStreetMap contributors
 </footer>
 
@@ -182,9 +182,9 @@ const CONFIG={
  observations:"data/latest.json",
  refreshMs:300000,
  maxAgeMinutes:90,
- wmsUrl:"",
- rgbLayer:"",
- irLayer:""
+ wmsUrl:"https://view.eumetsat.int/geoserver/wms",
+ rgbLayer:"mtg_fd:rgb_geocolour",
+ irLayer:"mtg_fd:ir105_hrfi"
 };
 
 const map=L.map("map",{
@@ -192,8 +192,6 @@ const map=L.map("map",{
  zoomControl:true
 }).setView([41.8,13.5],5);
 
-// Cartografia OSM senza API key.
-// Rispettare la tile usage policy OSM.
 L.tileLayer(
  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
  {
@@ -207,6 +205,9 @@ const lightningLayer=L.layerGroup().addTo(map);
 let satelliteLayer=null;
 let mode="lightning";
 let latest=null;
+let satelliteErrors=0;
+let satelliteLoaded=0;
+let satelliteRequest=0;
 
 const $=id=>document.getElementById(id);
 
@@ -214,10 +215,20 @@ function setStatus(message){
  $("status").textContent=message;
 }
 
+function clearSatellite(){
+ satelliteRequest++;
+ if(satelliteLayer){
+  map.removeLayer(satelliteLayer);
+  satelliteLayer=null;
+ }
+ satelliteErrors=0;
+ satelliteLoaded=0;
+}
+
 function setMode(next){
  if(!["lightning","rgb","ir"].includes(next))return;
- mode=next;
 
+ mode=next;
  ["lightning","rgb","ir"].forEach(id=>{
   $("btn-"+id).classList.toggle(
    "active",id===next
@@ -225,11 +236,7 @@ function setMode(next){
  });
 
  lightningLayer.clearLayers();
-
- if(satelliteLayer){
-  map.removeLayer(satelliteLayer);
-  satelliteLayer=null;
- }
+ clearSatellite();
 
  if(next==="lightning"){
   $("panel-title").textContent="ATTIVITÀ ELETTRICA";
@@ -239,51 +246,74 @@ function setMode(next){
   return;
  }
 
- $("panel-title").textContent=
-  next==="rgb"?"SATELLITE RGB":"SATELLITE IR";
+ const rgb=next==="rgb";
+ const layerName=rgb
+  ?CONFIG.rgbLayer:CONFIG.irLayer;
 
- $("source").textContent=
-  next==="rgb"?"EUMETSAT GeoColour":
-               "EUMETSAT Dust RGB";
-
+ $("panel-title").textContent=rgb
+  ?"SATELLITE RGB":"SATELLITE IR";
+ $("source").textContent=rgb
+  ?"EUMETSAT MTG Geo Colour"
+  :"EUMETSAT MTG IR 10.5 µm";
  $("count-row").hidden=true;
- $("updated").textContent="Non disponibile";
-
- const layerName=
-  next==="rgb"?CONFIG.rgbLayer:CONFIG.irLayer;
+ $("updated").textContent="Non verificata";
+ $("details").textContent=
+  "Visualizzazione WMS EUMETSAT. "+
+  "Disponibilità e orario da verificare.";
 
  if(!CONFIG.wmsUrl||!layerName){
-  setStatus("Layer in attesa di configurazione");
-  $("details").textContent=
-   "Accesso EUMETSAT da verificare.";
+  setStatus("Layer non configurato");
   return;
  }
+
+ const requestId=satelliteRequest;
+ const selectedMode=next;
 
  satelliteLayer=L.tileLayer.wms(
   CONFIG.wmsUrl,
   {
    layers:layerName,
+   styles:"",
    format:"image/png",
    transparent:true,
    version:"1.1.1",
+   tileSize:256,
+   opacity:0.85,
    attribution:"© EUMETSAT"
   }
  );
 
+ satelliteLayer.on("tileload",()=>{
+  if(requestId!==satelliteRequest||
+     mode!==selectedMode)return;
+  satelliteLoaded++;
+ });
+
  satelliteLayer.on("tileerror",()=>{
-  setStatus("Errore caricamento satellite");
+  if(requestId!==satelliteRequest||
+     mode!==selectedMode)return;
+  satelliteErrors++;
+  setStatus("Errore tile WMS");
+  $("details").textContent=
+   "Il servizio non ha restituito una "+
+   "o più immagini. Verificare GetMap.";
  });
 
  satelliteLayer.on("load",()=>{
-  if(mode===next){
-   setStatus("Immagini satellitari caricate");
+  if(requestId!==satelliteRequest||
+     mode!==selectedMode)return;
+
+  if(satelliteErrors>0){
+   setStatus("Caricamento parziale");
+  }else if(satelliteLoaded>0){
+   setStatus("Tile satellitari caricate");
+  }else{
+   setStatus("Nessuna tile confermata");
   }
  });
 
  satelliteLayer.addTo(map);
- setStatus("Caricamento immagini satellitari");
- $("details").textContent=
-  "Immagini richieste al servizio ufficiale.";
+ setStatus("Caricamento satellite");
 }
 
 function escapeHtml(value){
