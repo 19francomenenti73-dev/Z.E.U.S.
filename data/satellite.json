@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-17T12:45:55Z",
+  "generated_at": "2026-11-17T12:56:08Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -8,14 +8,24 @@
   "layer_count": 0,
   "candidates": {
     "rgb": [],
-    "dust": []
+    "dust": [],
+    "ir": []
   },
   "selected_layers": {
     "rgb": null,
-    "dust": null
+    "dust": null,
+    "ir": null
   },
   "image_download_enabled": false,
   "high_resolution_enabled": false,
   "observation_time": null,
-  "error_type": "ValueError"
+  "error_type": "ValueError",
+  "diagnostics": {
+    "http_status": 200,
+    "content_type": "application/vnd.ogc.wms_xml",
+    "response_bytes": 244972,
+    "xml_root": null,
+    "error_type": "ValueError",
+    "error_message": "XML DTD or entity declaration rejected"
+  }
 }
