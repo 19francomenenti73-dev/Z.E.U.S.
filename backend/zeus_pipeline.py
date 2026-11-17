@@ -1,6 +1,6 @@
 
 #!/usr/bin/env python3
-# Z.E.U.S. V1.3 - LI WMS diagnostics
+# Z.E.U.S. V1.4 - LI WMS temporal diagnostics
 # Python 3.12 - standard library only
 # No fabricated observations or HD imagery
 
@@ -14,6 +14,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from xml.parsers import expat
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,7 +27,7 @@ LI_LAYER = "mtg_fd:li_afa"
 TIMEOUT = 30
 MAX_XML = 16 * 1024 * 1024
 MAX_IMAGE = 1024 * 1024
-USER_AGENT = "ZEUS-NowcastingItalia/1.3"
+USER_AGENT = "ZEUS-NowcastingItalia/1.4"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,6 +89,22 @@ def parse_xml(body):
     return builder.close()
 
 
+def http_time(value):
+    if not value:
+        return None
+    try:
+        dt = parsedate_to_datetime(value)
+        if dt.tzinfo is None:
+            return None
+        return dt.astimezone(
+            timezone.utc
+        ).isoformat(
+            timespec="seconds"
+        ).replace("+00:00", "Z")
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 def request_bytes(params, limit):
     url = WMS_URL + (
         "&" if "?" in WMS_URL else "?"
@@ -100,26 +117,41 @@ def request_bytes(params, limit):
     with urllib.request.urlopen(
         req, timeout=TIMEOUT
     ) as response:
-        status = response.status
-        content_type = response.headers.get(
-            "Content-Type", ""
-        )
+        headers = response.headers
+        meta = {
+            "http_status": response.status,
+            "content_type": headers.get(
+                "Content-Type", ""
+            ),
+            "http_date": http_time(
+                headers.get("Date")
+            ),
+            "last_modified": http_time(
+                headers.get("Last-Modified")
+            ),
+            "cache_control": headers.get(
+                "Cache-Control"
+            ),
+            "etag": headers.get("ETag")
+        }
         body = response.read(limit + 1)
 
     if len(body) > limit:
-        raise ValueError("Response size limit exceeded")
-    return status, content_type, body
+        raise ValueError(
+            "Response size limit exceeded"
+        )
+
+    meta["response_bytes"] = len(body)
+    return body, meta
 
 
 def capabilities():
-    params = {
+    body, meta = request_bytes({
         "SERVICE": "WMS",
         "REQUEST": "GetCapabilities",
         "VERSION": "1.1.1"
-    }
-    status, ctype, body = request_bytes(
-        params, MAX_XML
-    )
+    }, MAX_XML)
+
     root = parse_xml(body)
     root_name = local(root.tag)
 
@@ -131,12 +163,8 @@ def capabilities():
             "Invalid capabilities root: " + root_name
         )
 
-    return root, {
-        "http_status": status,
-        "content_type": ctype,
-        "response_bytes": len(body),
-        "xml_root": root_name
-    }
+    meta["xml_root"] = root_name
+    return root, meta
 
 
 def layers_from(root):
@@ -144,20 +172,29 @@ def layers_from(root):
     for node in root.iter():
         if local(node.tag) != "Layer":
             continue
+
         name = child_text(node, "Name")
         if name:
             layers.append({
                 "name": name,
-                "title": child_text(node, "Title") or name
+                "title": child_text(
+                    node, "Title"
+                ) or name
             })
     return layers
 
 
 def candidates_from(layers):
-    result = {"rgb": [], "dust": [], "ir": []}
+    result = {
+        "rgb": [],
+        "dust": [],
+        "ir": []
+    }
+
     for layer in layers:
         label = (
-            layer["name"] + " " + layer["title"]
+            layer["name"] + " " +
+            layer["title"]
         ).lower()
 
         if re.search(
@@ -181,40 +218,92 @@ def candidates_from(layers):
     }
 
 
-def li_node_from(root):
-    for node in root.iter():
-        if local(node.tag) == "Layer":
-            if child_text(node, "Name") == LI_LAYER:
-                return node
-    return None
+def li_path_from(root):
+    # Preserve parent Layer nodes.
+    # WMS time dimensions may be inherited.
+    def visit(node, ancestors):
+        chain = (
+            ancestors + [node]
+            if local(node.tag) == "Layer"
+            else ancestors
+        )
 
+        if (
+            local(node.tag) == "Layer"
+            and child_text(node, "Name") == LI_LAYER
+        ):
+            return chain
 
-def time_dimension(node):
-    if node is None:
+        for child in node:
+            if (
+                local(child.tag) == "Layer"
+                or not chain
+            ):
+                found = visit(child, chain)
+                if found is not None:
+                    return found
         return None
 
-    for item in node:
-        if local(item.tag) not in (
-            "Dimension", "Extent"
-        ):
-            continue
-        if item.attrib.get(
-            "name", ""
-        ).lower() == "time":
-            return (item.text or "").strip()
+    return visit(root, [])
 
-    return None
+
+def time_dimension(path):
+    # Prefer the nearest time declaration.
+    # Extent can carry actual time values.
+    inherited = None
+
+    for node in path or []:
+        declared = None
+
+        for item in node:
+            if local(item.tag) not in (
+                "Dimension", "Extent"
+            ):
+                continue
+
+            if item.attrib.get(
+                "name", ""
+            ).lower() != "time":
+                continue
+
+            candidate = {
+                "tag": local(item.tag),
+                "value": (
+                    item.text or ""
+                ).strip(),
+                "default": item.attrib.get(
+                    "default"
+                )
+            }
+
+            if (
+                declared is None
+                or candidate["value"]
+            ):
+                declared = candidate
+
+        if declared is not None:
+            inherited = declared
+
+    return inherited
 
 
 def parse_time(value):
     try:
         dt = datetime.fromisoformat(
-            value.strip().replace("Z", "+00:00")
+            value.strip().replace(
+                "Z", "+00:00"
+            )
         )
         if dt.tzinfo is None:
             return None
         return dt.astimezone(timezone.utc)
-    except (ValueError, TypeError):
+    except (
+        AttributeError,
+        ValueError,
+        TypeError,
+        OverflowError
+    ):
         return None
 
 
@@ -223,26 +312,25 @@ def latest_advertised_time(dimension):
         return None
 
     times = []
-    for entry in dimension.split(","):
+    for entry in dimension["value"].split(","):
         parts = entry.strip().split("/")
-        if len(parts) == 1:
-            candidate = parts[0]
-        elif len(parts) >= 2:
-            candidate = parts[1]
-        else:
-            continue
+
+        # Interval end is a bound,
+        # not a verified satellite acquisition.
+        candidate = (
+            parts[0] if len(parts) == 1
+            else parts[1] if len(parts) == 3
+            else ""
+        )
 
         dt = parse_time(candidate)
         if dt is not None:
             times.append(dt)
 
-    if not times:
-        return None
-
-    return max(times)
+    return max(times) if times else None
 
 
-def test_li_getmap(time_value):
+def test_li_getmap(time_value=None):
     result = {
         "attempted": True,
         "http_status": None,
@@ -251,6 +339,8 @@ def test_li_getmap(time_value):
         "image_signature_valid": False,
         "image_width": None,
         "image_height": None,
+        "observation_time_verified": False,
+        "pixel_content_verified": False,
         "error_type": None,
         "error_message": None
     }
@@ -273,40 +363,46 @@ def test_li_getmap(time_value):
         params["TIME"] = time_value
 
     try:
-        status, ctype, body = request_bytes(
+        body, meta = request_bytes(
             params, MAX_IMAGE
         )
-        result["http_status"] = status
-        result["content_type"] = ctype
-        result["response_bytes"] = len(body)
+        result.update(meta)
 
         if (
-            body[:8] == b"\x89PNG\r\n\x1a\n"
-            and len(body) >= 24
+            len(body) < 24
+            or body[:8] != b"\x89PNG\r\n\x1a\n"
         ):
-            width = int.from_bytes(
-                body[16:20], "big"
-            )
-            height = int.from_bytes(
-                body[20:24], "big"
-            )
-            if width == 256 and height == 256:
-                result["image_signature_valid"] = True
-                result["image_width"] = width
-                result["image_height"] = height
-            else:
-                raise ValueError(
-                    "Unexpected PNG dimensions"
-                )
-        else:
             raise ValueError(
                 "GetMap did not return expected PNG"
             )
 
+        width = int.from_bytes(
+            body[16:20], "big"
+        )
+        height = int.from_bytes(
+            body[20:24], "big"
+        )
+
+        if (width, height) != (256, 256):
+            raise ValueError(
+                "Unexpected PNG dimensions"
+            )
+
+        result["image_signature_valid"] = True
+        result["image_width"] = width
+        result["image_height"] = height
+
     except Exception as exc:
-        result["error_type"] = type(exc).__name__
-        result["error_message"] = str(exc)[:300]
-        if isinstance(exc, urllib.error.HTTPError):
+        result["error_type"] = (
+            type(exc).__name__
+        )
+        result["error_message"] = (
+            str(exc)[:300]
+        )
+
+        if isinstance(
+            exc, urllib.error.HTTPError
+        ):
             result["http_status"] = exc.code
 
     return result
@@ -317,60 +413,71 @@ def check_li(root, now):
         "layer": LI_LAYER,
         "layer_found": False,
         "time_dimension_present": False,
+        "time_dimension": None,
         "latest_advertised_time": None,
         "age_minutes": None,
         "freshness_verified": False,
+        "safe_for_nowcasting": False,
         "getmap": {
             "attempted": False
         },
         "status": "unavailable"
     }
 
-    node = li_node_from(root)
-    if node is None:
+    path = li_path_from(root)
+    if path is None:
         result["status"] = "layer_not_found"
         return result
 
     result["layer_found"] = True
-    dimension = time_dimension(node)
-    result["time_dimension_present"] = bool(dimension)
+    dimension = time_dimension(path)
+    result["time_dimension_present"] = bool(
+        dimension and dimension["value"]
+    )
+    result["time_dimension"] = dimension
 
-    latest = latest_advertised_time(dimension)
-    requested_time = None
+    latest = latest_advertised_time(
+        dimension
+    )
 
     if latest is not None:
-        stamp = latest.isoformat().replace(
-            "+00:00", "Z"
+        iso = latest.isoformat(
+            timespec="seconds"
+        ).replace("+00:00", "Z")
+
+        result["latest_advertised_time"] = iso
+        result["age_minutes"] = round(
+            (now - latest).total_seconds() / 60,
+            1
         )
-        result["latest_advertised_time"] = stamp
-        age = (
-            now - latest
-        ).total_seconds() / 60
-        result["age_minutes"] = round(age, 1)
-        requested_time = stamp
 
-    result["getmap"] = test_li_getmap(
-        requested_time
-    )
+    # Frontend currently sends no TIME.
+    result["getmap"] = test_li_getmap()
 
-    image_ok = result["getmap"].get(
+    if latest is not None:
+        result["getmap_at_advertised_time"] = (
+            test_li_getmap(
+                result["latest_advertised_time"]
+            )
+        )
+
+    # PNG validity does not prove freshness.
+    if not result["getmap"].get(
         "image_signature_valid", False
-    )
-    fresh = (
+    ):
+        result["status"] = "getmap_unavailable"
+
+    elif (
         latest is not None
         and -5 <= result["age_minutes"] <= 30
-    )
-
-    # Metadata freshness is not proof of image
-    # pixel content or lightning occurrence.
-    result["freshness_verified"] = bool(fresh)
-
-    if image_ok and fresh:
-        result["status"] = "image_response_recent"
-    elif image_ok:
-        result["status"] = "image_response_unverified_time"
+    ):
+        result["status"] = (
+            "recent_time_advertised_not_verified"
+        )
     else:
-        result["status"] = "getmap_unavailable"
+        result["status"] = (
+            "image_response_unverified_time"
+        )
 
     return result
 
@@ -385,6 +492,7 @@ def validate():
             encoding="utf-8"
         ) as handle:
             data = json.load(handle)
+
         if data.get("schema_version") != 1:
             raise ValueError(
                 "Invalid schema in " + name
@@ -394,12 +502,14 @@ def validate():
 def main():
     stamp = now_utc()
     current = datetime.now(timezone.utc)
-    log.info("ZEUS V1.3 started")
+    log.info("ZEUS V1.4 started")
 
     wms_status = "unavailable"
     layer_count = 0
     candidates = {
-        "rgb": [], "dust": [], "ir": []
+        "rgb": [],
+        "dust": [],
+        "ir": []
     }
     diagnostics = {
         "error_type": None,
@@ -408,7 +518,8 @@ def main():
     li = {
         "layer": LI_LAYER,
         "layer_found": False,
-        "status": "not_checked"
+        "status": "not_checked",
+        "safe_for_nowcasting": False
     }
 
     try:
@@ -418,9 +529,14 @@ def main():
         candidates = candidates_from(layers)
         wms_status = "capabilities_available"
         li = check_li(root, current)
+
     except Exception as exc:
-        diagnostics["error_type"] = type(exc).__name__
-        diagnostics["error_message"] = str(exc)[:300]
+        diagnostics["error_type"] = (
+            type(exc).__name__
+        )
+        diagnostics["error_message"] = (
+            str(exc)[:300]
+        )
         log.warning("WMS: %s", exc)
 
     latest = {
@@ -450,7 +566,9 @@ def main():
         "image_download_enabled": False,
         "high_resolution_enabled": False,
         "observation_time": None,
-        "error_type": diagnostics.get("error_type"),
+        "error_type": diagnostics.get(
+            "error_type"
+        ),
         "diagnostics": diagnostics,
         "lightning_imager": li
     }
@@ -488,7 +606,7 @@ def main():
         "LI status: %s",
         li.get("status")
     )
-    log.info("ZEUS V1.3 completed")
+    log.info("ZEUS V1.4 completed")
 
 
 if __name__ == "__main__":
