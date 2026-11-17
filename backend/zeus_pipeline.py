@@ -1,6 +1,6 @@
 
 #!/usr/bin/env python3
-# Z.E.U.S. V1.4 - LI WMS temporal diagnostics
+# Z.E.U.S. V1.5 - LI WMS temporal diagnostics
 # Python 3.12 - standard library only
 # No fabricated observations or HD imagery
 
@@ -24,10 +24,12 @@ WMS_URL = os.getenv(
     "https://view.eumetsat.int/geoserver/wms"
 )
 LI_LAYER = "mtg_fd:li_afa"
+RGB_LAYER = "mtg_fd:rgb_geocolour"
+IR_LAYER = "mtg_fd:ir105_hrfi"
 TIMEOUT = 30
 MAX_XML = 16 * 1024 * 1024
 MAX_IMAGE = 1024 * 1024
-USER_AGENT = "ZEUS-NowcastingItalia/1.4"
+USER_AGENT = "ZEUS-NowcastingItalia/1.5"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -218,7 +220,7 @@ def candidates_from(layers):
     }
 
 
-def li_path_from(root):
+def layer_path_from(root, wanted):
     # Preserve parent Layer nodes.
     # WMS time dimensions may be inherited.
     def visit(node, ancestors):
@@ -230,7 +232,7 @@ def li_path_from(root):
 
         if (
             local(node.tag) == "Layer"
-            and child_text(node, "Name") == LI_LAYER
+            and child_text(node, "Name") == wanted
         ):
             return chain
 
@@ -330,6 +332,89 @@ def latest_advertised_time(dimension):
     return max(times) if times else None
 
 
+def satellite_layer_info(root, layer_name, now):
+    path = layer_path_from(root, layer_name)
+    dimension = time_dimension(path)
+    latest = latest_advertised_time(dimension)
+    result = {
+        "layer": layer_name,
+        "layer_found": path is not None,
+        "time_dimension_present": bool(
+            dimension and dimension["value"]
+        ),
+        "time_dimension": dimension,
+        "latest_advertised_time": None,
+        "age_minutes": None,
+        "freshness_verified": False,
+        "observation_time_verified": False,
+        "getmap_at_advertised_time": {
+            "attempted": False,
+            "image_signature_valid": False
+        }
+    }
+    if latest is None or path is None:
+        return result
+    iso = latest.isoformat(
+        timespec="seconds"
+    ).replace("+00:00", "Z")
+    result["latest_advertised_time"] = iso
+    result["age_minutes"] = round(
+        (now - latest).total_seconds() / 60, 1
+    )
+    # This timestamp is an advertised WMS bound,
+    # not independent proof of satellite acquisition.
+    result["getmap_at_advertised_time"] = (
+        test_layer_getmap(layer_name, iso)
+    )
+    return result
+
+
+def test_layer_getmap(layer_name, time_value=None):
+    result = {
+        "attempted": True,
+        "http_status": None,
+        "image_signature_valid": False,
+        "observation_time_verified": False,
+        "pixel_content_verified": False,
+        "error_type": None,
+        "error_message": None
+    }
+    params = {
+        "SERVICE": "WMS",
+        "REQUEST": "GetMap",
+        "VERSION": "1.1.1",
+        "LAYERS": layer_name,
+        "STYLES": "",
+        "SRS": "EPSG:4326",
+        "BBOX": "30,-15,55,40",
+        "WIDTH": "256",
+        "HEIGHT": "256",
+        "FORMAT": "image/png",
+        "TRANSPARENT": "TRUE"
+    }
+    if time_value:
+        params["TIME"] = time_value
+    try:
+        body, meta = request_bytes(params, MAX_IMAGE)
+        result.update(meta)
+        if (len(body) < 24 or
+                body[:8] != b"\x89PNG\r\n\x1a\n"):
+            raise ValueError("GetMap did not return PNG")
+        width = int.from_bytes(body[16:20], "big")
+        height = int.from_bytes(body[20:24], "big")
+        if (width, height) != (256, 256):
+            raise ValueError("Unexpected PNG dimensions")
+        result["image_signature_valid"] = True
+        result["image_width"] = width
+        result["image_height"] = height
+    except Exception as exc:
+        result["error_type"] = type(exc).__name__
+        result["error_message"] = str(exc)[:300]
+        if isinstance(exc, urllib.error.HTTPError):
+            result["http_status"] = exc.code
+    return result
+
+
 def test_li_getmap(time_value=None):
     result = {
         "attempted": True,
@@ -424,7 +509,7 @@ def check_li(root, now):
         "status": "unavailable"
     }
 
-    path = li_path_from(root)
+    path = layer_path_from(root, LI_LAYER)
     if path is None:
         result["status"] = "layer_not_found"
         return result
@@ -502,7 +587,7 @@ def validate():
 def main():
     stamp = now_utc()
     current = datetime.now(timezone.utc)
-    log.info("ZEUS V1.4 started")
+    log.info("ZEUS V1.5 started")
 
     wms_status = "unavailable"
     layer_count = 0
@@ -515,6 +600,7 @@ def main():
         "error_type": None,
         "error_message": None
     }
+    satellite_times = {}
     li = {
         "layer": LI_LAYER,
         "layer_found": False,
@@ -529,6 +615,12 @@ def main():
         candidates = candidates_from(layers)
         wms_status = "capabilities_available"
         li = check_li(root, current)
+        for key, layer_name in (
+            ("rgb", RGB_LAYER), ("ir", IR_LAYER)
+        ):
+            satellite_times[key] = satellite_layer_info(
+                root, layer_name, current
+            )
 
     except Exception as exc:
         diagnostics["error_type"] = (
@@ -559,10 +651,15 @@ def main():
         "layer_count": layer_count,
         "candidates": candidates,
         "selected_layers": {
-            "rgb": None,
+            "rgb": RGB_LAYER if satellite_times.get(
+                "rgb", {}
+            ).get("layer_found") else None,
             "dust": None,
-            "ir": None
+            "ir": IR_LAYER if satellite_times.get(
+                "ir", {}
+            ).get("layer_found") else None
         },
+        "satellite_times": satellite_times,
         "image_download_enabled": False,
         "high_resolution_enabled": False,
         "observation_time": None,
@@ -606,7 +703,7 @@ def main():
         "LI status: %s",
         li.get("status")
     )
-    log.info("ZEUS V1.4 completed")
+    log.info("ZEUS V1.5 completed")
 
 
 if __name__ == "__main__":
