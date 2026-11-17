@@ -1,13 +1,16 @@
+
 #!/usr/bin/env python3
-# Z.E.U.S. V1 — Nowcasting Italia
-# Backend satellitare pubblico e feed S.I.B.I.L.L.A.
-# Python 3.12 — nessuna dipendenza esterna
-# Nessun dato simulato, nessuna immagine HD
+# Z.E.U.S. V1.1 — Nowcasting Italia
+# Diagnostica EUMETView WMS
+# Feed osservativo per S.I.B.I.L.L.A.
+# Python 3.12 — solo libreria standard
+# Nessuna immagine HD, nessun dato simulato
 
 import json
 import logging
 import os
 import re
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,9 +25,9 @@ WMS_URL = os.getenv(
     "ZEUS_WMS_URL",
     "https://view.eumetsat.int/geoserver/wms"
 )
-TIMEOUT = 25
-MAX_RESPONSE = 4 * 1024 * 1024
-USER_AGENT = "ZEUS-NowcastingItalia/1.0"
+TIMEOUT = 30
+MAX_RESPONSE = 16 * 1024 * 1024
+USER_AGENT = "ZEUS-NowcastingItalia/1.1"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,27 +46,49 @@ def write_json(name, payload):
     DATA.mkdir(parents=True, exist_ok=True)
     path = DATA / name
     content = json.dumps(
-        payload, ensure_ascii=False, indent=2,
+        payload,
+        ensure_ascii=False,
+        indent=2,
         allow_nan=False
     ) + "\n"
 
     if path.exists():
         if path.read_text(encoding="utf-8") == content:
-            log.info("%s unchanged", name)
             return
 
     temp = path.with_suffix(".tmp")
     temp.write_text(content, encoding="utf-8")
     temp.replace(path)
-    log.info("%s published", name)
+    log.info("Published %s", name)
+
+
+def local_name(tag):
+    return tag.rsplit("}", 1)[-1]
+
+
+def child_text(node, name):
+    for child in node:
+        if local_name(child.tag) == name:
+            return (child.text or "").strip()
+    return ""
 
 
 def get_capabilities():
+    diagnostics = {
+        "http_status": None,
+        "content_type": None,
+        "response_bytes": 0,
+        "xml_root": None,
+        "error_type": None,
+        "error_message": None
+    }
+
     query = urllib.parse.urlencode({
         "SERVICE": "WMS",
         "REQUEST": "GetCapabilities",
         "VERSION": "1.1.1"
     })
+
     url = WMS_URL + (
         "&" if "?" in WMS_URL else "?"
     ) + query
@@ -72,50 +97,90 @@ def get_capabilities():
         url,
         headers={
             "User-Agent": USER_AGENT,
-            "Accept": "application/xml,text/xml"
+            "Accept": "application/xml,text/xml,*/*"
         }
     )
 
-    with urllib.request.urlopen(
-        request, timeout=TIMEOUT
-    ) as response:
-        content_type = response.headers.get(
-            "Content-Type", ""
-        ).lower()
-        if not any(x in content_type for x in (
-            "xml", "text/plain", "application/octet-stream"
-        )):
-            raise ValueError("Unexpected content type")
+    try:
+        with urllib.request.urlopen(
+            request, timeout=TIMEOUT
+        ) as response:
+            diagnostics["http_status"] = response.status
+            diagnostics["content_type"] = (
+                response.headers.get("Content-Type", "")
+            )
 
-        body = response.read(MAX_RESPONSE + 1)
+            body = response.read(MAX_RESPONSE + 1)
+            diagnostics["response_bytes"] = len(body)
+
         if len(body) > MAX_RESPONSE:
-            raise ValueError("Capabilities too large")
+            raise ValueError(
+                "Capabilities exceed 16 MB limit"
+            )
 
-    if b"<!DOCTYPE" in body.upper() or b"<!ENTITY" in body.upper():
-        raise ValueError("XML entities are not allowed")
+        if not body.strip():
+            raise ValueError("Empty WMS response")
 
-    return ET.fromstring(body)
+        upper = body.upper()
+        if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
+            raise ValueError(
+                "XML DTD or entity declaration rejected"
+            )
 
+        root = ET.fromstring(body)
+        root_name = local_name(root.tag)
+        diagnostics["xml_root"] = root_name
 
-def local_name(tag):
-    return tag.rsplit("}", 1)[-1]
+        if root_name in (
+            "ServiceExceptionReport",
+            "ExceptionReport"
+        ):
+            messages = [
+                (node.text or "").strip()
+                for node in root.iter()
+                if local_name(node.tag) in (
+                    "ServiceException", "ExceptionText"
+                )
+            ]
+            raise ValueError(
+                "WMS service exception: " +
+                "; ".join(messages)[:300]
+            )
 
+        if root_name not in (
+            "WMT_MS_Capabilities",
+            "WMS_Capabilities"
+        ):
+            raise ValueError(
+                "Unexpected XML root: " + root_name
+            )
 
-def child_text(node, tag):
-    for child in node:
-        if local_name(child.tag) == tag:
-            return (child.text or "").strip()
-    return ""
+        return root, diagnostics
+
+    except Exception as exc:
+        diagnostics["error_type"] = type(exc).__name__
+        diagnostics["error_message"] = str(exc)[:400]
+
+        if isinstance(exc, urllib.error.HTTPError):
+            diagnostics["http_status"] = exc.code
+
+        log.warning(
+            "WMS diagnostic: %s: %s",
+            type(exc).__name__, exc
+        )
+        return None, diagnostics
 
 
 def discover_layers(root):
     layers = []
+
     for node in root.iter():
         if local_name(node.tag) != "Layer":
             continue
 
         name = child_text(node, "Name")
         title = child_text(node, "Title")
+
         if not name:
             continue
 
@@ -128,35 +193,46 @@ def discover_layers(root):
 
 
 def select_candidates(layers):
-    rgb = []
-    dust = []
+    candidates = {
+        "rgb": [],
+        "dust": [],
+        "ir": []
+    }
 
     for layer in layers:
-        text = (
+        label = (
             layer["name"] + " " + layer["title"]
         ).lower()
 
         if re.search(
-            r"geo.?colou?r|true.?colou?r",
-            text
+            r"geo[\s_-]?colou?r|true[\s_-]?colou?r",
+            label
         ):
-            rgb.append(layer)
+            candidates["rgb"].append(layer)
 
-        if re.search(r"\bdust\b", text):
-            dust.append(layer)
+        if re.search(r"\bdust\b", label):
+            candidates["dust"].append(layer)
+
+        if re.search(
+            r"\binfrared\b|\bthermal\b|\bir[\s_-]?10",
+            label
+        ):
+            candidates["ir"].append(layer)
 
     return {
-        "rgb": rgb[:10],
-        "dust": dust[:10]
+        key: values[:10]
+        for key, values in candidates.items()
     }
 
 
 def validate_outputs():
-    for name in (
+    names = (
         "latest.json",
         "satellite.json",
         "sibilla_feed.json"
-    ):
+    )
+
+    for name in names:
         with (DATA / name).open(
             encoding="utf-8"
         ) as handle:
@@ -165,45 +241,47 @@ def validate_outputs():
         if not isinstance(value, dict):
             raise ValueError("Invalid JSON: " + name)
 
+        if value.get("schema_version") != 1:
+            raise ValueError("Invalid schema: " + name)
+
     latest = json.loads(
         (DATA / "latest.json").read_text(
             encoding="utf-8"
         )
     )
-    assert latest["schema_version"] == 1
+
     assert latest["status"] == "unavailable"
     assert latest["flashes"] == []
 
 
 def main():
     now = utc_now()
-    log.info("Z.E.U.S. pipeline started")
+    log.info("ZEUS V1.1 started")
 
-    wms_status = "unavailable"
-    candidates = {"rgb": [], "dust": []}
+    root, diagnostics = get_capabilities()
+
+    candidates = {
+        "rgb": [],
+        "dust": [],
+        "ir": []
+    }
     layer_count = 0
-    error_message = None
+    wms_status = "unavailable"
 
-    try:
-        root = get_capabilities()
+    if root is not None:
         layers = discover_layers(root)
         candidates = select_candidates(layers)
         layer_count = len(layers)
+
         wms_status = "capabilities_available"
-        log.info("WMS layers discovered: %s", layer_count)
+        log.info("WMS layers: %s", layer_count)
 
-    except (
-        urllib.error.URLError,
-        TimeoutError,
-        ValueError,
-        ET.ParseError,
-        OSError
-    ) as exc:
-        error_message = type(exc).__name__
-        log.warning("WMS unavailable: %s", exc)
+        for key, values in candidates.items():
+            log.info(
+                "Candidate %s layers: %s",
+                key, len(values)
+            )
 
-    # Compatibile con l'index.html esistente.
-    # Un array vuoto NON indica assenza di fulmini.
     latest = {
         "schema_version": 1,
         "status": "unavailable",
@@ -225,16 +303,16 @@ def main():
         "candidates": candidates,
         "selected_layers": {
             "rgb": None,
-            "dust": None
+            "dust": None,
+            "ir": None
         },
         "image_download_enabled": False,
         "high_resolution_enabled": False,
         "observation_time": None,
-        "error_type": error_message
+        "error_type": diagnostics["error_type"],
+        "diagnostics": diagnostics
     }
 
-    # Interfaccia osservativa per SIBILLA.
-    # Non altera gli orizzonti 3/24/48/72h.
     sibilla = {
         "schema_version": 1,
         "producer": "Z.E.U.S.",
@@ -264,9 +342,9 @@ def main():
     write_json("sibilla_feed.json", sibilla)
 
     validate_outputs()
-    log.info("Z.E.U.S. pipeline completed")
+    log.info("ZEUS V1.1 completed")
 
 
 if __name__ == "__main__":
     main()
-  
+    
