@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-17T12:45:55Z",
+  "provider": "EUMETSAT EUMETView",
+  "service": "WMS",
+  "endpoint": "https://view.eumetsat.int/geoserver/wms",
+  "status": "unavailable",
+  "layer_count": 0,
+  "candidates": {
+    "rgb": [],
+    "dust": []
+  },
+  "selected_layers": {
+    "rgb": null,
+    "dust": null
+  },
+  "image_download_enabled": false,
+  "high_resolution_enabled": false,
+  "observation_time": null,
+  "error_type": "ValueError"
+}

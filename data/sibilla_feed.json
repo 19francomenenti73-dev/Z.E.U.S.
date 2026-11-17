@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "producer": "Z.E.U.S.",
+  "generated_at": "2026-11-17T12:45:55Z",
+  "region": "Italy-Mediterranean",
+  "status": "unavailable",
+  "observation_time": null,
+  "lightning": {
+    "status": "unavailable",
+    "source": "EUMETSAT MTG LI",
+    "flashes": [],
+    "flash_count": null,
+    "density": null,
+    "trend": null
+  },
+  "satellite": {
+    "metadata_status": "unavailable",
+    "rgb_observation": null,
+    "ir_observation": null
+  },
+  "forecast_horizons_modified": false,
+  "usable_for_forecasting": false
+}
