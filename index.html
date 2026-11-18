@@ -85,9 +85,13 @@ button:focus-visible{outline:2px solid white}
 .flash-symbol.red{
  color:#ff3434;text-shadow:0 0 12px #ff3434;
 }
+.flash-symbol{--age-opacity:1;opacity:var(--age-opacity)}
+.flash-icon{pointer-events:auto}
+.flash-symbol.fresh{filter:drop-shadow(0 0 5px #45eaff) drop-shadow(0 0 9px #45eaff)}
+.flash-symbol.old{filter:grayscale(1) drop-shadow(0 0 2px #596879);text-shadow:none!important;animation:none!important}
 @keyframes zeusPulse{
- 0%,100%{opacity:.65;transform:scale(.85)}
- 50%{opacity:1;transform:scale(1.22)}
+ 0%,100%{transform:scale(.85)}
+ 50%{transform:scale(1.22)}
 }
 @media(prefers-reduced-motion:reduce){
  .flash-symbol{animation:none}
@@ -152,16 +156,15 @@ footer{
   <div id="details" class="muted"></div>
  </div>
  <p id="legend" class="notice">
-  ⚡ Giallo · ⚡ Arancione · ⚡ Rosso:
-  colori grafici individuati nel raster LI.
-  Non sono classi ufficiali di intensità
-  né posizioni di fulmini individuali.
+  ⚡ Giallo · ⚡ Arancione · ⚡ Rosso: aree cromatiche LI.
+   Alone azzurro: nuovo rilevamento.
+   Grigio e trasparenza: traccia precedente, fino a 120 minuti.
+  Non sono classi ufficiali né fulmini individuali.
  </p>
  <p id="audio-note" class="notice">
-  Con AUDIO ON, crepitio ripetuto mentre
-   restano simboli rilevati. I simboli
-   persistono finché non premi SIMBOLI OFF.
-   Possono riferirsi a immagini precedenti.
+  Con AUDIO ON, crepitio soltanto in presenza di
+   rilevamenti recenti. I simboli storici restano
+   visibili fino a 120 minuti e poi scompaiono.
  </p>
 </section>
 
@@ -192,6 +195,10 @@ const CONFIG={
  refreshMs:300000,
  maxAgeMinutes:30,
  metadataMaxAgeMinutes:45,
+ historyMinutes:120,
+ freshMinutes:15,
+ historyKey:"zeus_li_history_v2",
+ retryMs:300000,
  wms:"https://view.eumetsat.int/geoserver/wms",
  li:"mtg_fd:li_afa",
  rgb:"mtg_fd:rgb_geocolour",
@@ -232,6 +239,11 @@ let refreshBusy=false;
 let soundTimer=null;
 let soundBusy=false;
 let symbolsTimestamp=null;
+let history=[];
+let lastAnalyzedFrame=null;
+let lastRetryAt=0;
+let lastAnalysisError="";
+let lastAnalysisTileCount=0;
 
 function setStatus(message){
  $("status").textContent=message;
@@ -262,7 +274,6 @@ function clearLayer(){
   map.removeLayer(layer);
   layer=null;
  }
- // Conserva i simboli rilevati anche cambiando frame.
  tileResults.clear();
  analysisAllowed=true;
  loadedTiles=0;
@@ -276,24 +287,20 @@ function toggleSymbols(){
  );
  $("btn-symbols").textContent=showSymbols
   ?"⚡ SIMBOLI ON":"⚡ SIMBOLI OFF";
- if(!showSymbols){
-  displayPoints=[];
-  symbolsTimestamp=null;
-  $("count").textContent="0";
- }
- drawSymbols(displayPoints);
+ drawSymbols();
  syncSound();
 }
 
 function syncSound(){
  clearInterval(soundTimer);
- 
+
  soundTimer=null;
- if(!audioEnabled||!showSymbols||
-    !displayPoints.length||mode!=="lightning")return;
- soundTimer=setInterval(async()=>{
-  if(soundBusy||document.hidden||!audioEnabled||
-     !showSymbols||!displayPoints.length||
+ if(!audioEnabled||!showSymbols||!liRecent||
+    !history.some(p=>Date.now()-p.detectedAt<CONFIG.freshMinutes*60000)||
+    mode!=="lightning")return; soundTimer=setInterval(async()=>{
+  if(soundBusy||document.hidden||!audioEnabled||!liRecent||
+     !showSymbols||
+     !history.some(p=>Date.now()-p.detectedAt<CONFIG.freshMinutes*60000)||
      mode!=="lightning")return;
   soundBusy=true;
   try{
@@ -383,7 +390,7 @@ async function testAudio(){
  if(await initializeAudio())electricCrack();
  else setStatus("Audio non disponibile");
 }
- 
+
 function classifyPixel(r,g,b,a){
  if(a<28)return null;
  const max=Math.max(r,g,b);
@@ -504,70 +511,98 @@ function consolidate(points){
  return output;
 }
 
-function drawSymbols(points){
+// Archivio locale: soltanto rilevamenti grafici, mai fulmini individuali.
+function restoreHistory(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(CONFIG.historyKey)||"[]");
+  if(Array.isArray(saved))history=saved.filter(validHistoryPoint);
+ }catch(error){history=[];}
+ pruneHistory();
+}
+function validHistoryPoint(p){
+ return p&&Number.isFinite(p.lat)&&Math.abs(p.lat)<=90&&
+  Number.isFinite(p.lng)&&Math.abs(p.lng)<=180&&
+  Number.isFinite(p.detectedAt)&&p.detectedAt<=Date.now()+300000&&
+  Date.now()-p.detectedAt<=CONFIG.historyMinutes*60000&&
+  ["yellow","orange","red"].includes(p.kind)&&
+  typeof p.frame==="string";
+}
+function pruneHistory(){
+ history=history.filter(validHistoryPoint);
+ try{localStorage.setItem(CONFIG.historyKey,JSON.stringify(history));}
+ catch(error){console.warn("ZEUS: archivio locale non disponibile",error);}
+}
+function drawSymbols(){
  symbols.clearLayers();
+ pruneHistory();
+ $("count").textContent=String(history.length);
  if(mode!=="lightning"||!showSymbols)return;
- for(const p of points){
+ const now=Date.now();
+ for(const p of history){
+  const age=(now-p.detectedAt)/60000;
+  const fresh=age<=CONFIG.freshMinutes;
+  const opacity=Math.max(.18,1-.82*age/CONFIG.historyMinutes);
+  const className=fresh?"fresh":"old";
   const icon=L.divIcon({
    className:"flash-icon",
-   html:'<span class="flash-symbol '+
-    p.kind+'">⚡</span>',
-   iconSize:[36,36],
-   iconAnchor:[18,18]
+   html:'<span class="flash-symbol '+p.kind+' '+className+
+    '" style="--age-opacity:'+opacity.toFixed(2)+'">⚡</span>',
+   iconSize:[36,36],iconAnchor:[18,18]
   });
-  L.marker([p.lat,p.lng],{
-   icon,keyboard:true
-  }).bindPopup(
-   "Area cromatica LI AFA. "+
-   "Colore grafico: "+p.kind+". "+
-   "Non è un fulmine individuale."
-  ).addTo(symbols);
+  L.marker([p.lat,p.lng],{icon,keyboard:true})
+   .bindPopup("Area cromatica LI AFA ("+p.kind+"). "+
+    "Rilevamento grafico: "+new Date(p.detectedAt).toLocaleString("it-IT")+
+    ". Non rappresenta un fulmine individuale.")
+   .addTo(symbols);
  }
 }
-
+function storeFrame(points){
+ if(!liTime||!points.length)return;
+ const frameDate=Date.parse(liTime);
+ if(!Number.isFinite(frameDate)||
+    Date.now()-frameDate>CONFIG.historyMinutes*60000)return;
+ // Non duplicare rilevamenti dello stesso frame, anche dopo riapertura.
+ const existing=history.filter(p=>p.frame===liTime);
+ for(const p of points){
+  const here=L.latLng(p.lat,p.lng);
+  if(existing.some(q=>here.distanceTo(L.latLng(q.lat,q.lng))<30000))continue;
+  const entry={lat:p.lat,lng:p.lng,kind:p.kind,
+   detectedAt:frameDate,frame:liTime};
+  history.push(entry);existing.push(entry);
+ }
+ pruneHistory();
+ drawSymbols();
+ syncSound();
+}
 function finishAnalysis(){
  if(mode!=="lightning")return;
  if(!analysisAllowed){
-  // Non cancellare i simboli già osservati.
+  lastAnalysisError="Lettura pixel WMS bloccata (CORS/Canvas)";
   setStatus("LI visibile - lettura pixel bloccata");
-  previous=null;
   return;
  }
-
  const all=[];
- for(const item of tileResults.values()){
-  all.push(...item);
- }
+ for(const item of tileResults.values())all.push(...item);
  const points=consolidate(all);
+ lastAnalysisTileCount=loadedTiles;
  if(points.length){
-  for(const p of points){
-   const here=L.latLng(p.lat,p.lng);
-   if(!displayPoints.some(q=>
-      here.distanceTo(L.latLng(q.lat,q.lng))<30000)){
-    displayPoints.push(p);
-   }
-  }
-  symbolsTimestamp=liTime;
-  $("count").textContent=String(displayPoints.length);
-  drawSymbols(displayPoints);
+  storeFrame(points);
+  lastAnalyzedFrame=liTime;
+  lastAnalysisError="";
+ }else{
+  drawSymbols();
+  lastAnalysisError=loadedTiles===0
+   ?"Nessuna tile LI caricata"
+   :"Nessuna area cromatica riconosciuta nel frame";
+  if(loadedTiles>0)lastAnalyzedFrame=liTime;
  }
- // Nessun pixel trovato: conserva le aree precedenti,
- // ma non attribuirle al frame corrente.
- syncSound();
-
- const view=currentBoundsKey();
- previous=liRecent&&loadedTiles>0&&failedTiles===0
-  ?{time:liTime,view,points}:null;
-
- setStatus(!liRecent
-  ?"Dato non recente - simboli precedenti"
-  :failedTiles
-   ?"Caricamento LI parziale"
-   :"LI caricato - analisi grafica indicativa");
- if(symbolsTimestamp&&symbolsTimestamp!==liTime){
-  $("details").textContent+=
-   " Simboli persistenti del frame "+symbolsTimestamp+".";
- }
+ syncSound(); setStatus(!liRecent?"LI non recente - tracce storiche":
+  failedTiles?"Caricamento LI parziale":
+  !loadedTiles?"LI senza tile caricate":
+  !points.length?"LI caricato - nessuna nuova area riconosciuta":
+  "LI caricato - nuove aree grafiche riconosciute");
+ $("details").textContent+=(" Analisi: "+lastAnalysisError+
+  ". Tracce archiviate: "+history.length+".");
 }
 
 function attachWms(name,isLI,time){
@@ -579,7 +614,7 @@ function attachWms(name,isLI,time){
   opacity:isLI?1:.85,
   attribution:"© EUMETSAT"
  };
- 
+
  if(time)options.time=time;
  if(isLI){
   options.crossOrigin="anonymous";
@@ -698,11 +733,10 @@ async function updateLI(){
     "Non necessariamente attività attuale.";
 
   if(liTime===time&&layer){
-   if(!recent){
-    previous=null;
-    setStatus("LI non recente - simboli precedenti");
-   }
-   return;
+   if(!recent)setStatus("LI non recente - tracce storiche");
+   // Nuova analisi solo se la precedente non ha caricato alcuna tile.
+   if(loadedTiles>0||Date.now()-lastRetryAt<CONFIG.retryMs)return;
+   lastRetryAt=Date.now();
   }
 
   clearLayer();
@@ -825,14 +859,14 @@ function setMode(next){
 map.on("moveend",()=>{
  if(mode!=="lightning")return;
  previous=null;
- if(liTime&&layer){
-  // I simboli geografici restano nella loro posizione.
-  // Le nuove tile aggiornano soltanto i rilevamenti.
-  tileResults.clear();
- }
+ // La vista non deve cancellare le tile in corso di analisi.
+ drawSymbols();
 });
 
+restoreHistory();
 setMode("lightning");
+// Aggiorna dissolvenza e scadenza senza nuove richieste WMS.
+setInterval(()=>{drawSymbols();syncSound();},60000);
 
 setInterval(async()=>{
  if(refreshBusy)return;
