@@ -297,7 +297,12 @@ function syncSound(){
  soundTimer=null;
  if(!audioEnabled||!showSymbols||!liRecent||
     !history.some(p=>Date.now()-p.detectedAt<CONFIG.freshMinutes*60000)||
-    mode!=="lightning")return; soundTimer=setInterval(async()=>{
+    mode!=="lightning")return;
+ soundTimer=null;
+ if(!audioEnabled||!showSymbols||!liRecent||
+    !history.some(p=>Date.now()-p.detectedAt<CONFIG.freshMinutes*60000)||
+    mode!=="lightning")return;
+ soundTimer=setInterval(async()=>{
   if(soundBusy||document.hidden||!audioEnabled||!liRecent||
      !showSymbols||
      !history.some(p=>Date.now()-p.detectedAt<CONFIG.freshMinutes*60000)||
@@ -392,19 +397,21 @@ async function testAudio(){
 }
 
 function classifyPixel(r,g,b,a){
- if(a<28)return null;
- const max=Math.max(r,g,b);
- const min=Math.min(r,g,b);
- if(max-min<45)return null;
- if(r>145&&r>g*1.35&&r>b*1.5){
-  return "red";
- }
- if(r>145&&g>55&&g<190&&b<125){
-  return "orange";
- }
- if(r>145&&g>125&&b<145){
-  return "yellow";
- }
+ // Interpreta la tinta del pixel WMS, non il solo valore RGB.
+ // Il raster può contenere gialli chiari e antialiasing.
+ if(a<24)return null;
+ const max=Math.max(r,g,b),min=Math.min(r,g,b);
+ const delta=max-min;
+ if(max<95||delta<22||delta/max<.12)return null;
+ let hue;
+ if(max===r)hue=((g-b)/delta+6)%6;
+ else if(max===g)hue=(b-r)/delta+2;
+ else hue=(r-g)/delta+4;
+ hue*=60;
+ // Rosso, arancione e giallo: colori grafici, non intensità fisiche.
+ if(hue>=345||hue<=12)return "red";
+ if(hue>12&&hue<43)return "orange";
+ if(hue>=43&&hue<=72)return "yellow";
  return null;
 }
 
@@ -426,14 +433,14 @@ function analyzeTile(image,coords){
   return null;
  }
 
- const step=4,side=64;
+ const step=2,side=128;
  const labels=new Uint8Array(side*side);
  const visited=new Uint8Array(side*side);
  const kinds=["","yellow","orange","red"];
 
  for(let y=0;y<side;y++){
   for(let x=0;x<side;x++){
-   const px=x*step+2,py=y*step+2;
+   const px=x*step+1,py=y*step+1;
    const i=(py*256+px)*4;
    const kind=classifyPixel(
     pixels[i],pixels[i+1],
@@ -475,9 +482,9 @@ function analyzeTile(image,coords){
     }
    }
 
-   if(n<2)continue;
-   const px=coords.x*256+(sx/n)*step+2;
-   const py=coords.y*256+(sy/n)*step+2;
+   if(n<3)continue;
+   const px=coords.x*256+(sx/n)*step+1;
+   const py=coords.y*256+(sy/n)*step+1;
    const point=map.unproject(
     L.point(px,py),coords.z
    );
@@ -577,32 +584,38 @@ function storeFrame(points){
 function finishAnalysis(){
  if(mode!=="lightning")return;
  if(!analysisAllowed){
-  lastAnalysisError="Lettura pixel WMS bloccata (CORS/Canvas)";
-  setStatus("LI visibile - lettura pixel bloccata");
-  return;
- }
- const all=[];
- for(const item of tileResults.values())all.push(...item);
- const points=consolidate(all);
- lastAnalysisTileCount=loadedTiles;
- if(points.length){
-  storeFrame(points);
-  lastAnalyzedFrame=liTime;
-  lastAnalysisError="";
+  lastAnalysisError="Canvas non leggibile (controllare CORS)";
+  setStatus("LI visibile - pixel non leggibili");
  }else{
-  drawSymbols();
-  lastAnalysisError=loadedTiles===0
-   ?"Nessuna tile LI caricata"
-   :"Nessuna area cromatica riconosciuta nel frame";
-  if(loadedTiles>0)lastAnalyzedFrame=liTime;
+  const all=[];
+  for(const item of tileResults.values())all.push(...item);
+  const points=consolidate(all);
+  lastAnalysisTileCount=analyzedTiles;
+  if(points.length){
+   storeFrame(points);
+   lastAnalyzedFrame=liTime;
+   lastAnalysisError="";
+  }else{
+   drawSymbols();   lastAnalysisError=!analyzedTiles
+    ?"Nessuna tile analizzata"
+    :"Nessuna area cromatica riconosciuta";
+   if(analyzedTiles)lastAnalyzedFrame=liTime;
+  }
+  setStatus(!liRecent?"LI non recente - tracce storiche":
+   failedTiles?"Caricamento LI parziale":
+   !analyzedTiles?"LI senza tile analizzate":
+   !points.length?"LI caricato - nessuna area riconosciuta":
+   "LI caricato - aree grafiche riconosciute");
  }
- syncSound(); setStatus(!liRecent?"LI non recente - tracce storiche":
-  failedTiles?"Caricamento LI parziale":
-  !loadedTiles?"LI senza tile caricate":
-  !points.length?"LI caricato - nessuna nuova area riconosciuta":
-  "LI caricato - nuove aree grafiche riconosciute");
- $("details").textContent+=(" Analisi: "+lastAnalysisError+
-  ". Tracce archiviate: "+history.length+".");
+ // Sostituisce il testo: non accumula messaggi a ogni refresh.
+ $("details").textContent=lastMetadataNote+
+  " | Tile caricate: "+loadedTiles+
+  ", analizzate: "+analyzedTiles+
+  ", senza coordinate: "+missingCoords+
+  ", errori: "+failedTiles+
+  ". "+lastAnalysisError+
+  ". Tracce 120 min: "+history.length+".";
+ syncSound();
 }
 
 function attachWms(name,isLI,time){
@@ -638,9 +651,16 @@ function attachWms(name,isLI,time){
   loadedTiles++;
   if(!isLI||!analysisAllowed)return;
 
-  const coords=event.coords;
-  if(!coords)return;
+  let coords=event.coords;
+  // Fallback per versioni/eventi Leaflet senza coords nel tileload.
+  if(!coords&&next._tiles){
+   for(const entry of Object.values(next._tiles)){
+    if(entry.el===event.tile){coords=entry.coords;break;}
+   }
+  }
+  if(!coords){missingCoords++;return;}
   const result=analyzeTile(event.tile,coords);
+  if(analysisAllowed)analyzedTiles++;
   if(!analysisAllowed){
    clearTimeout(scanTimer);
    finishAnalysis();
@@ -652,6 +672,8 @@ function attachWms(name,isLI,time){
    ].join("/");
    tileResults.set(key,result);
   }
+  clearTimeout(scanTimer);
+  scanTimer=setTimeout(finishAnalysis,450);
  });
 
  next.on("tileerror",()=>{
@@ -726,16 +748,15 @@ async function updateLI(){
   liRecent=recent;
   $("updated").textContent=
    time.replace("T"," ").replace("Z"," UTC");
-  $("details").textContent=recent
-   ?"Orario recente dichiarato dal WMS. "+
-    "Contenuto non verificato indipendentemente."
-   :"Ultima immagine dichiarata dal WMS. "+
-    "Non necessariamente attività attuale.";
+  lastMetadataNote=recent
+   ?"Orario recente dichiarato dal WMS; contenuto non verificato."
+   :"Orario WMS non recente; attività attuale non verificata.";
+  $("details").textContent=lastMetadataNote;
 
   if(liTime===time&&layer){
    if(!recent)setStatus("LI non recente - tracce storiche");
    // Nuova analisi solo se la precedente non ha caricato alcuna tile.
-   if(loadedTiles>0||Date.now()-lastRetryAt<CONFIG.retryMs)return;
+   if(analyzedTiles>0||Date.now()-lastRetryAt<CONFIG.retryMs)return;
    lastRetryAt=Date.now();
   }
 
