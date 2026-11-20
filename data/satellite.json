@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-20T00:01:00Z",
+  "generated_at": "2026-11-20T00:21:01Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
   "status": "capabilities_available",
-  "layer_count": 113,
+  "layer_count": 116,
   "candidates": {
     "rgb": [
       {
@@ -59,6 +59,10 @@
       {
         "name": "eps:m03_ir108",
         "title": "AVHRR IR10.8 6 orbits accumulated - Metop C"
+      },
+      {
+        "name": "mumi:worldcloudmap_ir108",
+        "title": "Geostationary Ring IR10.8 μm Image - Multimission"
       }
     ]
   },
@@ -74,10 +78,10 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-19T23:40:00.000Z/PT10M",
-        "default": "2026-11-19T23:40:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-20T00:00:00.000Z/PT10M",
+        "default": "2026-11-20T00:00:00Z"
       },
-      "latest_advertised_time": "2026-11-19T23:40:00Z",
+      "latest_advertised_time": "2026-11-20T00:00:00Z",
       "age_minutes": 21.0,
       "freshness_verified": false,
       "observation_time_verified": false,
@@ -90,11 +94,11 @@
         "error_type": null,
         "error_message": null,
         "content_type": "image/png",
-        "http_date": "2026-11-20T00:01:31Z",
-        "last_modified": "2026-11-20T00:01:31Z",
+        "http_date": "2026-11-20T00:21:06Z",
+        "last_modified": "2026-11-20T00:21:06Z",
         "cache_control": "max-age=604800",
         "etag": null,
-        "response_bytes": 121902,
+        "response_bytes": 121844,
         "image_width": 256,
         "image_height": 256
       }
@@ -105,21 +109,29 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-19T23:40:00.000Z/PT10M",
-        "default": "2026-11-19T23:40:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-20T00:00:00.000Z/PT10M",
+        "default": "2026-11-20T00:00:00Z"
       },
-      "latest_advertised_time": "2026-11-19T23:40:00Z",
+      "latest_advertised_time": "2026-11-20T00:00:00Z",
       "age_minutes": 21.0,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
         "attempted": true,
-        "http_status": 502,
-        "image_signature_valid": false,
+        "http_status": 200,
+        "image_signature_valid": true,
         "observation_time_verified": false,
         "pixel_content_verified": false,
-        "error_type": "HTTPError",
-        "error_message": "HTTP Error 502: Bad Gateway"
+        "error_type": null,
+        "error_message": null,
+        "content_type": "image/png",
+        "http_date": "2026-11-20T00:21:07Z",
+        "last_modified": null,
+        "cache_control": "max-age=604800, must-revalidate",
+        "etag": null,
+        "response_bytes": 27368,
+        "image_width": 256,
+        "image_height": 256
       }
     }
   },
@@ -130,11 +142,11 @@
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
-    "http_date": "2026-11-20T00:01:18Z",
+    "http_date": "2026-11-20T00:21:01Z",
     "last_modified": null,
     "cache_control": "public, max-age=120",
     "etag": null,
-    "response_bytes": 239680,
+    "response_bytes": 244972,
     "xml_root": "WMT_MS_Capabilities"
   },
   "lightning_imager": {
@@ -143,11 +155,11 @@
     "time_dimension_present": true,
     "time_dimension": {
       "tag": "Extent",
-      "value": "2025-05-30T15:00:00.000Z/2026-11-19T23:50:00.000Z/PT5M",
-      "default": "2026-11-19T23:50:00Z"
+      "value": "2025-05-30T15:00:00.000Z/2026-11-20T00:05:00.000Z/PT5M",
+      "default": "2026-11-20T00:05:00Z"
     },
-    "latest_advertised_time": "2026-11-19T23:50:00Z",
-    "age_minutes": 11.0,
+    "latest_advertised_time": "2026-11-20T00:05:00Z",
+    "age_minutes": 16.0,
     "freshness_verified": false,
     "safe_for_nowcasting": false,
     "getmap": {
@@ -162,7 +174,7 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-20T00:01:19Z",
+      "http_date": "2026-11-20T00:21:03Z",
       "last_modified": "2026-11-19T22:41:03Z",
       "cache_control": "max-age=604800",
       "etag": null
@@ -172,7 +184,7 @@
       "attempted": true,
       "http_status": 200,
       "content_type": "image/png",
-      "response_bytes": 2664,
+      "response_bytes": 2524,
       "image_signature_valid": true,
       "image_width": 256,
       "image_height": 256,
@@ -180,8 +192,8 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-20T00:01:29Z",
-      "last_modified": "2026-11-20T00:01:29Z",
+      "http_date": "2026-11-20T00:21:03Z",
+      "last_modified": "2026-11-20T00:17:38Z",
       "cache_control": "max-age=604800",
       "etag": null
     }
