@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-22T03:21:01Z",
+  "generated_at": "2026-11-22T03:41:00Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -78,10 +78,10 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-22T02:50:00.000Z/PT10M",
-        "default": "2026-11-22T02:50:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-22T03:10:00.000Z/PT10M",
+        "default": "2026-11-22T03:10:00Z"
       },
-      "latest_advertised_time": "2026-11-22T02:50:00Z",
+      "latest_advertised_time": "2026-11-22T03:10:00Z",
       "age_minutes": 31.0,
       "freshness_verified": false,
       "observation_time_verified": false,
@@ -94,11 +94,11 @@
         "error_type": null,
         "error_message": null,
         "content_type": "image/png",
-        "http_date": "2026-11-22T03:21:08Z",
-        "last_modified": "2026-11-22T03:21:08Z",
+        "http_date": "2026-11-22T03:41:06Z",
+        "last_modified": "2026-11-22T03:36:17Z",
         "cache_control": "max-age=604800",
         "etag": null,
-        "response_bytes": 126768,
+        "response_bytes": 131898,
         "image_width": 256,
         "image_height": 256
       }
@@ -109,11 +109,11 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-22T02:50:00.000Z/PT10M",
-        "default": "2026-11-22T02:50:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-22T03:20:00.000Z/PT10M",
+        "default": "2026-11-22T03:20:00Z"
       },
-      "latest_advertised_time": "2026-11-22T02:50:00Z",
-      "age_minutes": 31.0,
+      "latest_advertised_time": "2026-11-22T03:20:00Z",
+      "age_minutes": 21.0,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
@@ -125,11 +125,11 @@
         "error_type": null,
         "error_message": null,
         "content_type": "image/png",
-        "http_date": "2026-11-22T03:21:09Z",
+        "http_date": "2026-11-22T03:41:07Z",
         "last_modified": null,
         "cache_control": "max-age=604800, must-revalidate",
         "etag": null,
-        "response_bytes": 25385,
+        "response_bytes": 25221,
         "image_width": 256,
         "image_height": 256
       }
@@ -142,7 +142,7 @@
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
-    "http_date": "2026-11-22T03:21:02Z",
+    "http_date": "2026-11-22T03:41:01Z",
     "last_modified": null,
     "cache_control": "public, max-age=120",
     "etag": null,
@@ -155,10 +155,10 @@
     "time_dimension_present": true,
     "time_dimension": {
       "tag": "Extent",
-      "value": "2025-05-30T15:00:00.000Z/2026-11-22T03:05:00.000Z/PT5M",
-      "default": "2026-11-22T03:05:00Z"
+      "value": "2025-05-30T15:00:00.000Z/2026-11-22T03:25:00.000Z/PT5M",
+      "default": "2026-11-22T03:25:00Z"
     },
-    "latest_advertised_time": "2026-11-22T03:05:00Z",
+    "latest_advertised_time": "2026-11-22T03:25:00Z",
     "age_minutes": 16.0,
     "freshness_verified": false,
     "safe_for_nowcasting": false,
@@ -174,7 +174,7 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-22T03:21:03Z",
+      "http_date": "2026-11-22T03:41:03Z",
       "last_modified": "2026-11-22T01:41:03Z",
       "cache_control": "max-age=604800",
       "etag": null
@@ -184,7 +184,7 @@
       "attempted": true,
       "http_status": 200,
       "content_type": "image/png",
-      "response_bytes": 1942,
+      "response_bytes": 2058,
       "image_signature_valid": true,
       "image_width": 256,
       "image_height": 256,
@@ -192,8 +192,8 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-22T03:21:05Z",
-      "last_modified": "2026-11-22T03:21:05Z",
+      "http_date": "2026-11-22T03:41:05Z",
+      "last_modified": "2026-11-22T03:41:05Z",
       "cache_control": "max-age=604800",
       "etag": null
     }
