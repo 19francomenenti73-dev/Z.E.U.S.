@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-23T09:41:09Z",
+  "generated_at": "2026-11-23T10:01:08Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -78,34 +78,11 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-23T09:20:00.000Z/PT10M",
-        "default": "2026-11-23T09:20:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-23T09:30:00.000Z/PT10M",
+        "default": "2026-11-23T09:30:00Z"
       },
-      "latest_advertised_time": "2026-11-23T09:20:00Z",
-      "age_minutes": 21.2,
-      "freshness_verified": false,
-      "observation_time_verified": false,
-      "getmap_at_advertised_time": {
-        "attempted": true,
-        "http_status": 502,
-        "image_signature_valid": false,
-        "observation_time_verified": false,
-        "pixel_content_verified": false,
-        "error_type": "HTTPError",
-        "error_message": "HTTP Error 502: Bad Gateway"
-      }
-    },
-    "ir": {
-      "layer": "mtg_fd:ir105_hrfi",
-      "layer_found": true,
-      "time_dimension_present": true,
-      "time_dimension": {
-        "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-23T09:20:00.000Z/PT10M",
-        "default": "2026-11-23T09:20:00Z"
-      },
-      "latest_advertised_time": "2026-11-23T09:20:00Z",
-      "age_minutes": 21.2,
+      "latest_advertised_time": "2026-11-23T09:30:00Z",
+      "age_minutes": 31.1,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
@@ -117,11 +94,42 @@
         "error_type": null,
         "error_message": null,
         "content_type": "image/png",
-        "http_date": "2026-11-23T09:41:35Z",
+        "http_date": "2026-11-23T10:01:11Z",
+        "last_modified": "2026-11-23T09:53:40Z",
+        "cache_control": "max-age=604800",
+        "etag": null,
+        "response_bytes": 156946,
+        "image_width": 256,
+        "image_height": 256
+      }
+    },
+    "ir": {
+      "layer": "mtg_fd:ir105_hrfi",
+      "layer_found": true,
+      "time_dimension_present": true,
+      "time_dimension": {
+        "tag": "Extent",
+        "value": "2024-09-23T00:00:00.000Z/2026-11-23T09:30:00.000Z/PT10M",
+        "default": "2026-11-23T09:30:00Z"
+      },
+      "latest_advertised_time": "2026-11-23T09:30:00Z",
+      "age_minutes": 31.1,
+      "freshness_verified": false,
+      "observation_time_verified": false,
+      "getmap_at_advertised_time": {
+        "attempted": true,
+        "http_status": 200,
+        "image_signature_valid": true,
+        "observation_time_verified": false,
+        "pixel_content_verified": false,
+        "error_type": null,
+        "error_message": null,
+        "content_type": "image/png",
+        "http_date": "2026-11-23T10:01:12Z",
         "last_modified": null,
         "cache_control": "max-age=604800, must-revalidate",
         "etag": null,
-        "response_bytes": 23878,
+        "response_bytes": 23901,
         "image_width": 256,
         "image_height": 256
       }
@@ -134,7 +142,7 @@
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
-    "http_date": "2026-11-23T09:41:10Z",
+    "http_date": "2026-11-23T10:01:09Z",
     "last_modified": null,
     "cache_control": "public, max-age=120",
     "etag": null,
@@ -147,11 +155,11 @@
     "time_dimension_present": true,
     "time_dimension": {
       "tag": "Extent",
-      "value": "2025-05-30T15:00:00.000Z/2026-11-23T09:25:00.000Z/PT5M",
-      "default": "2026-11-23T09:25:00Z"
+      "value": "2025-05-30T15:00:00.000Z/2026-11-23T09:45:00.000Z/PT5M",
+      "default": "2026-11-23T09:45:00Z"
     },
-    "latest_advertised_time": "2026-11-23T09:25:00Z",
-    "age_minutes": 16.2,
+    "latest_advertised_time": "2026-11-23T09:45:00Z",
+    "age_minutes": 16.1,
     "freshness_verified": false,
     "safe_for_nowcasting": false,
     "getmap": {
@@ -166,7 +174,7 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-23T09:41:11Z",
+      "http_date": "2026-11-23T10:01:09Z",
       "last_modified": "2026-11-23T08:41:04Z",
       "cache_control": "max-age=604800",
       "etag": null
@@ -176,7 +184,7 @@
       "attempted": true,
       "http_status": 200,
       "content_type": "image/png",
-      "response_bytes": 1700,
+      "response_bytes": 2037,
       "image_signature_valid": true,
       "image_width": 256,
       "image_height": 256,
@@ -184,8 +192,8 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-23T09:41:12Z",
-      "last_modified": "2026-11-23T09:38:09Z",
+      "http_date": "2026-11-23T10:01:11Z",
+      "last_modified": "2026-11-23T09:54:56Z",
       "cache_control": "max-age=604800",
       "etag": null
     }
