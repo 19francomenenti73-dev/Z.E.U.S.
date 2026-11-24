@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-24T14:41:03Z",
+  "generated_at": "2026-11-24T15:01:07Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -78,21 +78,21 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-24T14:10:00.000Z/PT10M",
-        "default": "2026-11-24T14:10:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-24T14:30:00.000Z/PT10M",
+        "default": "2026-11-24T14:30:00Z"
       },
-      "latest_advertised_time": "2026-11-24T14:10:00Z",
+      "latest_advertised_time": "2026-11-24T14:30:00Z",
       "age_minutes": 31.1,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
         "attempted": true,
-        "http_status": 504,
+        "http_status": null,
         "image_signature_valid": false,
         "observation_time_verified": false,
         "pixel_content_verified": false,
-        "error_type": "HTTPError",
-        "error_message": "HTTP Error 504: Gateway Time-out"
+        "error_type": "TimeoutError",
+        "error_message": "The read operation timed out"
       }
     },
     "ir": {
@@ -101,11 +101,11 @@
       "time_dimension_present": true,
       "time_dimension": {
         "tag": "Extent",
-        "value": "2024-09-23T00:00:00.000Z/2026-11-24T14:10:00.000Z/PT10M",
-        "default": "2026-11-24T14:10:00Z"
+        "value": "2024-09-23T00:00:00.000Z/2026-11-24T14:40:00.000Z/PT10M",
+        "default": "2026-11-24T14:40:00Z"
       },
-      "latest_advertised_time": "2026-11-24T14:10:00Z",
-      "age_minutes": 31.1,
+      "latest_advertised_time": "2026-11-24T14:40:00Z",
+      "age_minutes": 21.1,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
@@ -126,7 +126,7 @@
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
-    "http_date": "2026-11-24T14:41:03Z",
+    "http_date": "2026-11-24T15:01:07Z",
     "last_modified": null,
     "cache_control": "public, max-age=120",
     "etag": null,
@@ -139,30 +139,34 @@
     "time_dimension_present": true,
     "time_dimension": {
       "tag": "Extent",
-      "value": "2025-05-30T15:00:00.000Z/2026-11-24T14:25:00.000Z/PT5M",
-      "default": "2026-11-24T14:25:00Z"
+      "value": "2025-05-30T15:00:00.000Z/2026-11-24T14:45:00.000Z/PT5M",
+      "default": "2026-11-24T14:45:00Z"
     },
-    "latest_advertised_time": "2026-11-24T14:25:00Z",
+    "latest_advertised_time": "2026-11-24T14:45:00Z",
     "age_minutes": 16.1,
     "freshness_verified": false,
     "safe_for_nowcasting": false,
     "getmap": {
       "attempted": true,
-      "http_status": null,
-      "content_type": null,
-      "response_bytes": null,
-      "image_signature_valid": false,
-      "image_width": null,
-      "image_height": null,
+      "http_status": 200,
+      "content_type": "image/png",
+      "response_bytes": 1932,
+      "image_signature_valid": true,
+      "image_width": 256,
+      "image_height": 256,
       "observation_time_verified": false,
       "pixel_content_verified": false,
-      "error_type": "TimeoutError",
-      "error_message": "The read operation timed out"
+      "error_type": null,
+      "error_message": null,
+      "http_date": "2026-11-24T15:01:20Z",
+      "last_modified": "2026-11-24T14:18:47Z",
+      "cache_control": "max-age=604800",
+      "etag": null
     },
-    "status": "getmap_unavailable",
+    "status": "recent_time_advertised_not_verified",
     "getmap_at_advertised_time": {
       "attempted": true,
-      "http_status": 504,
+      "http_status": 500,
       "content_type": null,
       "response_bytes": null,
       "image_signature_valid": false,
@@ -171,7 +175,7 @@
       "observation_time_verified": false,
       "pixel_content_verified": false,
       "error_type": "HTTPError",
-      "error_message": "HTTP Error 504: Gateway Time-out"
+      "error_message": "HTTP Error 500: Internal Server Error"
     }
   }
 }
