@@ -1,34 +1,201 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-24T13:01:06Z",
+  "generated_at": "2026-11-24T13:21:09Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
-  "status": "unavailable",
-  "layer_count": 0,
+  "status": "capabilities_available",
+  "layer_count": 116,
   "candidates": {
-    "rgb": [],
-    "dust": [],
-    "ir": []
+    "rgb": [
+      {
+        "name": "mtg_fd:rgb_geocolour",
+        "title": "Geo Colour RGB - MTG-I - 0 degree"
+      },
+      {
+        "name": "mtg_fd:rgb_truecolour",
+        "title": "True Colour RGB - MTG-I - 0 degree"
+      }
+    ],
+    "dust": [
+      {
+        "name": "mtg_fd:rgb_dust",
+        "title": "Dust RGB - MTG-I - 0 degree"
+      },
+      {
+        "name": "msg_fes:rgb_dust",
+        "title": "Dust RGB - MSG - 0 degree"
+      },
+      {
+        "name": "msg_iodc:rgb_dust",
+        "title": "Dust RGB - MSG - Indian Ocean"
+      },
+      {
+        "name": "mumi:wideareacoverage_rgb_dust",
+        "title": "Geo Ring Dust RGB - Multimission"
+      }
+    ],
+    "ir": [
+      {
+        "name": "mtg_fd:ir105_hrfi",
+        "title": "FCI HRFI IR10.5 μm Image - MTG-I - 0 degree"
+      },
+      {
+        "name": "msg_fes:ir108",
+        "title": "High Rate SEVIRI IR10.8 μm Image - MSG - 0 degree"
+      },
+      {
+        "name": "msg_iodc:ir108",
+        "title": "High Rate SEVIRI IR10.8 μm Image - MSG - Indian Ocean"
+      },
+      {
+        "name": "eps:m01_ir108",
+        "title": "AVHRR IR10.8 6 orbits accumulated - Metop B"
+      },
+      {
+        "name": "eps:m02_ir108",
+        "title": "AVHRR IR10.8 6 orbits accumulated - Metop A"
+      },
+      {
+        "name": "eps:m03_ir108",
+        "title": "AVHRR IR10.8 6 orbits accumulated - Metop C"
+      },
+      {
+        "name": "mumi:worldcloudmap_ir108",
+        "title": "Geostationary Ring IR10.8 μm Image - Multimission"
+      }
+    ]
   },
   "selected_layers": {
-    "rgb": null,
+    "rgb": "mtg_fd:rgb_geocolour",
     "dust": null,
-    "ir": null
+    "ir": "mtg_fd:ir105_hrfi"
   },
-  "satellite_times": {},
+  "satellite_times": {
+    "rgb": {
+      "layer": "mtg_fd:rgb_geocolour",
+      "layer_found": true,
+      "time_dimension_present": true,
+      "time_dimension": {
+        "tag": "Extent",
+        "value": "2024-09-23T00:00:00.000Z/2026-11-24T12:50:00.000Z/PT10M",
+        "default": "2026-11-24T12:50:00Z"
+      },
+      "latest_advertised_time": "2026-11-24T12:50:00Z",
+      "age_minutes": 31.2,
+      "freshness_verified": false,
+      "observation_time_verified": false,
+      "getmap_at_advertised_time": {
+        "attempted": true,
+        "http_status": 200,
+        "image_signature_valid": true,
+        "observation_time_verified": false,
+        "pixel_content_verified": false,
+        "error_type": null,
+        "error_message": null,
+        "content_type": "image/png",
+        "http_date": "2026-11-24T13:21:12Z",
+        "last_modified": "2026-11-24T13:17:26Z",
+        "cache_control": "max-age=604800",
+        "etag": null,
+        "response_bytes": 155265,
+        "image_width": 256,
+        "image_height": 256
+      }
+    },
+    "ir": {
+      "layer": "mtg_fd:ir105_hrfi",
+      "layer_found": true,
+      "time_dimension_present": true,
+      "time_dimension": {
+        "tag": "Extent",
+        "value": "2024-09-23T00:00:00.000Z/2026-11-24T12:50:00.000Z/PT10M",
+        "default": "2026-11-24T12:50:00Z"
+      },
+      "latest_advertised_time": "2026-11-24T12:50:00Z",
+      "age_minutes": 31.2,
+      "freshness_verified": false,
+      "observation_time_verified": false,
+      "getmap_at_advertised_time": {
+        "attempted": true,
+        "http_status": 200,
+        "image_signature_valid": true,
+        "observation_time_verified": false,
+        "pixel_content_verified": false,
+        "error_type": null,
+        "error_message": null,
+        "content_type": "image/png",
+        "http_date": "2026-11-24T13:21:14Z",
+        "last_modified": null,
+        "cache_control": "max-age=604800, must-revalidate",
+        "etag": null,
+        "response_bytes": 26906,
+        "image_width": 256,
+        "image_height": 256
+      }
+    }
+  },
   "image_download_enabled": false,
   "high_resolution_enabled": false,
   "observation_time": null,
-  "error_type": "TimeoutError",
+  "error_type": null,
   "diagnostics": {
-    "error_type": "TimeoutError",
-    "error_message": "The read operation timed out"
+    "http_status": 200,
+    "content_type": "application/vnd.ogc.wms_xml",
+    "http_date": "2026-11-24T13:21:10Z",
+    "last_modified": null,
+    "cache_control": "public, max-age=120",
+    "etag": null,
+    "response_bytes": 244972,
+    "xml_root": "WMT_MS_Capabilities"
   },
   "lightning_imager": {
     "layer": "mtg_fd:li_afa",
-    "layer_found": false,
-    "status": "not_checked",
-    "safe_for_nowcasting": false
+    "layer_found": true,
+    "time_dimension_present": true,
+    "time_dimension": {
+      "tag": "Extent",
+      "value": "2025-05-30T15:00:00.000Z/2026-11-24T11:45:00.000Z/PT5M",
+      "default": "2026-11-24T11:45:00Z"
+    },
+    "latest_advertised_time": "2026-11-24T11:45:00Z",
+    "age_minutes": 96.2,
+    "freshness_verified": false,
+    "safe_for_nowcasting": false,
+    "getmap": {
+      "attempted": true,
+      "http_status": 200,
+      "content_type": "image/png",
+      "response_bytes": 1932,
+      "image_signature_valid": true,
+      "image_width": 256,
+      "image_height": 256,
+      "observation_time_verified": false,
+      "pixel_content_verified": false,
+      "error_type": null,
+      "error_message": null,
+      "http_date": "2026-11-24T13:21:11Z",
+      "last_modified": "2026-11-24T11:41:04Z",
+      "cache_control": "max-age=604800",
+      "etag": null
+    },
+    "status": "image_response_unverified_time",
+    "getmap_at_advertised_time": {
+      "attempted": true,
+      "http_status": 200,
+      "content_type": "image/png",
+      "response_bytes": 3996,
+      "image_signature_valid": true,
+      "image_width": 256,
+      "image_height": 256,
+      "observation_time_verified": false,
+      "pixel_content_verified": false,
+      "error_type": null,
+      "error_message": null,
+      "http_date": "2026-11-24T13:21:12Z",
+      "last_modified": "2026-11-24T12:19:07Z",
+      "cache_control": "max-age=604800",
+      "etag": null
+    }
   }
 }
