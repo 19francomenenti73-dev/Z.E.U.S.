@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-25T12:01:05Z",
+  "generated_at": "2026-11-25T12:21:01Z",
   "provider": "EUMETSAT EUMETView",
   "service": "WMS",
   "endpoint": "https://view.eumetsat.int/geoserver/wms",
@@ -82,7 +82,7 @@
         "default": "2026-11-25T11:30:00Z"
       },
       "latest_advertised_time": "2026-11-25T11:30:00Z",
-      "age_minutes": 31.1,
+      "age_minutes": 51.0,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
@@ -94,7 +94,7 @@
         "error_type": null,
         "error_message": null,
         "content_type": "image/png",
-        "http_date": "2026-11-25T12:01:09Z",
+        "http_date": "2026-11-25T12:21:03Z",
         "last_modified": "2026-11-25T11:59:28Z",
         "cache_control": "max-age=604800",
         "etag": null,
@@ -113,7 +113,7 @@
         "default": "2026-11-25T11:40:00Z"
       },
       "latest_advertised_time": "2026-11-25T11:40:00Z",
-      "age_minutes": 21.1,
+      "age_minutes": 41.0,
       "freshness_verified": false,
       "observation_time_verified": false,
       "getmap_at_advertised_time": {
@@ -125,7 +125,7 @@
         "error_type": null,
         "error_message": null,
         "content_type": "image/png",
-        "http_date": "2026-11-25T12:01:11Z",
+        "http_date": "2026-11-25T12:21:09Z",
         "last_modified": null,
         "cache_control": "max-age=604800, must-revalidate",
         "etag": null,
@@ -142,7 +142,7 @@
   "diagnostics": {
     "http_status": 200,
     "content_type": "application/vnd.ogc.wms_xml",
-    "http_date": "2026-11-25T12:01:06Z",
+    "http_date": "2026-11-25T12:21:01Z",
     "last_modified": null,
     "cache_control": "public, max-age=120",
     "etag": null,
@@ -155,11 +155,11 @@
     "time_dimension_present": true,
     "time_dimension": {
       "tag": "Extent",
-      "value": "2025-05-30T15:00:00.000Z/2026-11-25T11:45:00.000Z/PT5M",
-      "default": "2026-11-25T11:45:00Z"
+      "value": "2025-05-30T15:00:00.000Z/2026-11-25T12:05:00.000Z/PT5M",
+      "default": "2026-11-25T12:05:00Z"
     },
-    "latest_advertised_time": "2026-11-25T11:45:00Z",
-    "age_minutes": 16.1,
+    "latest_advertised_time": "2026-11-25T12:05:00Z",
+    "age_minutes": 16.0,
     "freshness_verified": false,
     "safe_for_nowcasting": false,
     "getmap": {
@@ -174,7 +174,7 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-25T12:01:07Z",
+      "http_date": "2026-11-25T12:21:02Z",
       "last_modified": "2026-11-25T09:40:44Z",
       "cache_control": "max-age=604800",
       "etag": null
@@ -184,7 +184,7 @@
       "attempted": true,
       "http_status": 200,
       "content_type": "image/png",
-      "response_bytes": 5397,
+      "response_bytes": 6763,
       "image_signature_valid": true,
       "image_width": 256,
       "image_height": 256,
@@ -192,8 +192,8 @@
       "pixel_content_verified": false,
       "error_type": null,
       "error_message": null,
-      "http_date": "2026-11-25T12:01:09Z",
-      "last_modified": "2026-11-25T11:57:03Z",
+      "http_date": "2026-11-25T12:21:02Z",
+      "last_modified": "2026-11-25T12:17:06Z",
       "cache_control": "max-age=604800",
       "etag": null
     }
